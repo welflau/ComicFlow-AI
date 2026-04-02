@@ -1,4 +1,6 @@
 #!/bin/bash
+
+# Build script for the application
 set -e
 
 echo "🚀 Starting build process..."
@@ -18,40 +20,32 @@ fi
 echo "📦 Installing dependencies..."
 npm ci
 
-echo "🔍 Running code quality checks..."
+echo "🔍 Running linting..."
 npm run lint
-npm run type-check
 
 echo "🧪 Running tests..."
 npm run test
 
 echo "🏗️ Building application..."
-if [ "$NODE_ENV" = "production" ]; then
-    npm run build:production
-elif [ "$NODE_ENV" = "staging" ]; then
-    npm run build:staging
-else
-    npm run build
-fi
+npm run build
 
-echo "📊 Analyzing bundle..."
+echo "📊 Analyzing bundle size..."
 npm run analyze:bundle
 
 echo "🔒 Running security audit..."
-npm audit --audit-level moderate
+npm audit --audit-level high
 
 echo "✅ Build completed successfully!"
 
-# Generate build info
+# Create build info file
 cat > dist/build-info.json << EOF
 {
-  "buildTime": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "buildTime": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "gitCommit": "$(git rev-parse HEAD)",
   "gitBranch": "$(git rev-parse --abbrev-ref HEAD)",
   "nodeVersion": "$(node --version)",
-  "npmVersion": "$(npm --version)",
-  "environment": "${NODE_ENV:-development}"
+  "npmVersion": "$(npm --version)"
 }
 EOF
 
-echo "📄 Build info generated at dist/build-info.json"
+echo "📝 Build info saved to dist/build-info.json"

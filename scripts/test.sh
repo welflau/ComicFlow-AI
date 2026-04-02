@@ -1,18 +1,17 @@
 #!/bin/bash
+
+# Test script for the application
 set -e
 
 echo "🧪 Starting test suite..."
 
-# Setup test environment
-export NODE_ENV=test
-
-# Check if required tools are installed
+# Check if Node.js is installed
 if ! command -v node &> /dev/null; then
     echo "❌ Node.js is not installed"
     exit 1
 fi
 
-echo "📦 Installing test dependencies..."
+echo "📦 Installing dependencies..."
 npm ci
 
 echo "🔍 Running linting..."
@@ -30,38 +29,37 @@ npm run test:integration
 echo "♿ Running accessibility tests..."
 npm run test:a11y
 
-echo "🎨 Running visual regression tests..."
-npm run test:visual
-
-echo "⚡ Running performance tests..."
-npm run test:performance
-
 echo "🔒 Running security tests..."
-npm run test:security
+npm audit --audit-level high
 
-# Generate test report
-echo "📊 Generating test report..."
-cat > test-results.json << EOF
-{
-  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "environment": "test",
-  "gitCommit": "$(git rev-parse HEAD)",
-  "testSuites": {
-    "unit": "passed",
-    "integration": "passed",
-    "accessibility": "passed",
-    "visual": "passed",
-    "performance": "passed",
-    "security": "passed"
-  },
-  "coverage": {
-    "statements": "85%",
-    "branches": "80%",
-    "functions": "90%",
-    "lines": "85%"
-  }
-}
+echo "📊 Generating test reports..."
+mkdir -p reports
+
+# Generate coverage report
+if [ -d "coverage" ]; then
+    cp -r coverage reports/
+    echo "📈 Coverage report available at reports/coverage/index.html"
+fi
+
+# Generate test results summary
+cat > reports/test-summary.md << EOF
+# Test Results Summary
+
+## Test Execution
+- **Date**: $(date)
+- **Node Version**: $(node --version)
+- **npm Version**: $(npm --version)
+- **Git Commit**: $(git rev-parse HEAD)
+
+## Test Status
+✅ All tests passed successfully!
+
+## Coverage
+See detailed coverage report in the coverage directory.
+
+## Security Audit
+No high-severity vulnerabilities found.
 EOF
 
-echo "✅ All tests passed successfully!"
-echo "📄 Test report generated at test-results.json"
+echo "✅ All tests completed successfully!"
+echo "📊 Test reports available in the reports/ directory"

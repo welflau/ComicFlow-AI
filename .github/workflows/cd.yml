@@ -1,14 +1,13 @@
-name: Continuous Deployment
+name: CD Pipeline
 
 on:
   push:
     branches: [ main ]
-    tags: [ 'v*' ]
+  workflow_dispatch:
 
 jobs:
   deploy-staging:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     environment: staging
     
     steps:
@@ -24,46 +23,25 @@ jobs:
     - name: Install dependencies
       run: npm ci
     
-    - name: Build for staging
-      run: npm run build:staging
+    - name: Build application
+      run: npm run build
       env:
         NODE_ENV: staging
         VITE_API_URL: ${{ secrets.STAGING_API_URL }}
-        VITE_APP_VERSION: ${{ github.sha }}
-    
-    - name: Build Docker image
-      run: |
-        docker build -f Dockerfile.production -t ${{ secrets.DOCKER_REGISTRY }}/app:staging-${{ github.sha }} .
-        docker tag ${{ secrets.DOCKER_REGISTRY }}/app:staging-${{ github.sha }} ${{ secrets.DOCKER_REGISTRY }}/app:staging-latest
-    
-    - name: Login to Docker Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ secrets.DOCKER_REGISTRY }}
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-    
-    - name: Push Docker image
-      run: |
-        docker push ${{ secrets.DOCKER_REGISTRY }}/app:staging-${{ github.sha }}
-        docker push ${{ secrets.DOCKER_REGISTRY }}/app:staging-latest
     
     - name: Deploy to staging
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ secrets.STAGING_HOST }}
-        username: ${{ secrets.STAGING_USER }}
-        key: ${{ secrets.STAGING_SSH_KEY }}
-        script: |
-          cd /opt/app
-          docker-compose -f docker-compose.staging.yml pull
-          docker-compose -f docker-compose.staging.yml up -d
-          docker system prune -f
-    
-    - name: Health check
       run: |
-        sleep 30
-        curl -f ${{ secrets.STAGING_URL }}/health || exit 1
+        chmod +x ./scripts/deploy.sh
+        ./scripts/deploy.sh staging
+      env:
+        STAGING_HOST: ${{ secrets.STAGING_HOST }}
+        STAGING_USER: ${{ secrets.STAGING_USER }}
+        STAGING_KEY: ${{ secrets.STAGING_SSH_KEY }}
+    
+    - name: Run smoke tests
+      run: npm run test:e2e:staging
+      env:
+        STAGING_URL: ${{ secrets.STAGING_URL }}
     
     - name: Notify deployment
       uses: 8398a7/action-slack@v3
@@ -71,14 +49,13 @@ jobs:
         status: ${{ job.status }}
         channel: '#deployments'
         webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-        message: 'Staging deployment completed: ${{ secrets.STAGING_URL }}'
       if: always()
-
+  
   deploy-production:
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
     environment: production
-    needs: []
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/main'
     
     steps:
     - name: Checkout code
@@ -93,65 +70,45 @@ jobs:
     - name: Install dependencies
       run: npm ci
     
-    - name: Build for production
-      run: npm run build:production
+    - name: Build application
+      run: npm run build
       env:
         NODE_ENV: production
         VITE_API_URL: ${{ secrets.PRODUCTION_API_URL }}
-        VITE_APP_VERSION: ${{ github.ref_name }}
-    
-    - name: Run production tests
-      run: npm run test:e2e
-    
-    - name: Build Docker image
-      run: |
-        docker build -f Dockerfile.production -t ${{ secrets.DOCKER_REGISTRY }}/app:${{ github.ref_name }} .
-        docker tag ${{ secrets.DOCKER_REGISTRY }}/app:${{ github.ref_name }} ${{ secrets.DOCKER_REGISTRY }}/app:latest
-    
-    - name: Login to Docker Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ secrets.DOCKER_REGISTRY }}
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-    
-    - name: Push Docker image
-      run: |
-        docker push ${{ secrets.DOCKER_REGISTRY }}/app:${{ github.ref_name }}
-        docker push ${{ secrets.DOCKER_REGISTRY }}/app:latest
     
     - name: Deploy to production
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ secrets.PRODUCTION_HOST }}
-        username: ${{ secrets.PRODUCTION_USER }}
-        key: ${{ secrets.PRODUCTION_SSH_KEY }}
-        script: |
-          cd /opt/app
-          docker-compose -f docker-compose.prod.yml pull
-          docker-compose -f docker-compose.prod.yml up -d
-          docker system prune -f
-    
-    - name: Health check
       run: |
-        sleep 60
+        chmod +x ./scripts/deploy.sh
+        ./scripts/deploy.sh production
+      env:
+        PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+        PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
+        PRODUCTION_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+    
+    - name: Run health checks
+      run: |
+        sleep 30
         curl -f ${{ secrets.PRODUCTION_URL }}/health || exit 1
     
-    - name: Create GitHub Release
+    - name: Create release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref_name }}
-        release_name: Release ${{ github.ref_name }}
+        tag_name: v${{ github.run_number }}
+        release_name: Release v${{ github.run_number }}
+        body: |
+          Automated release from commit ${{ github.sha }}
+          
+          Changes:
+          ${{ github.event.head_commit.message }}
         draft: false
         prerelease: false
     
-    - name: Notify deployment
+    - name: Notify production deployment
       uses: 8398a7/action-slack@v3
       with:
         status: ${{ job.status }}
-        channel: '#deployments'
+        channel: '#production'
         webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-        message: 'Production deployment completed: ${{ secrets.PRODUCTION_URL }}'
       if: always()
