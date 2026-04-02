@@ -10,7 +10,7 @@ class APIHandler(SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            self.wfile.write(json.dumps({"status": "ok", "service": "feature_3662"}).encode())
+            self.wfile.write(json.dumps({"status": "ok", "service": "feature_4756"}).encode())
         else:
             super().do_GET()
 
