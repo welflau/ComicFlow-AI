@@ -15,77 +15,100 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
-        }
-
-        .app-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             overflow: hidden;
         }
 
-        .header {
-            background: linear-gradient(135deg, #4CAF50, #45a049);
-            color: white;
-            padding: 20px;
-            text-align: center;
+        .app-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toolbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .toolbar h1 {
+            color: #333;
+            font-size: 20px;
+            margin-right: 30px;
         }
 
         .main-content {
+            flex: 1;
             display: flex;
-            min-height: 600px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
         }
 
         .sidebar {
-            width: 250px;
-            background: #f8f9fa;
+            width: 300px;
+            background: rgba(255, 255, 255, 0.95);
             padding: 20px;
-            border-right: 1px solid #e9ecef;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
         }
 
-        .sidebar h3 {
+        .sidebar h2 {
             color: #333;
-            margin-bottom: 15px;
-            font-size: 16px;
+            margin-bottom: 20px;
+            font-size: 18px;
         }
 
-        .status-item {
+        .status-stats {
+            margin-bottom: 30px;
+        }
+
+        .stat-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px;
+            padding: 10px 15px;
             margin-bottom: 8px;
-            background: white;
-            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
             border-left: 4px solid #ddd;
-            cursor: pointer;
             transition: all 0.3s ease;
         }
 
-        .status-item:hover {
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            transform: translateX(2px);
+        .stat-item:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateX(5px);
         }
 
-        .status-item.testing {
-            border-left-color: #ff9800;
+        .stat-item.testing {
+            border-left-color: #FF9800;
         }
 
-        .status-item.completed {
-            border-left-color: #4caf50;
+        .stat-item.completed {
+            border-left-color: #4CAF50;
         }
 
-        .status-item.pending {
-            border-left-color: #2196f3;
+        .stat-item.pending {
+            border-left-color: #2196F3;
         }
 
-        .status-count {
-            background: #007bff;
+        .stat-item.failed {
+            border-left-color: #f44336;
+        }
+
+        .stat-label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .stat-count {
+            background: #667eea;
             color: white;
-            padding: 2px 8px;
+            padding: 4px 12px;
             border-radius: 12px;
             font-size: 12px;
             font-weight: bold;
@@ -94,114 +117,126 @@
         .content-area {
             flex: 1;
             padding: 20px;
+            overflow-y: auto;
         }
 
         .ticket-list {
-            display: grid;
-            gap: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
 
-        .ticket-card {
-            background: white;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
+        .ticket-list h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 18px;
         }
 
-        .ticket-card:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            transform: translateY(-2px);
-        }
-
-        .ticket-header {
+        .ticket-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 15px;
             margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
         }
 
-        .ticket-id {
-            font-weight: bold;
-            color: #333;
+        .ticket-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
         }
 
-        .ticket-status {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .status-testing {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
-        }
-
-        .status-completed {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .status-pending {
-            background: #cce5ff;
-            color: #004085;
-            border: 1px solid #b3d7ff;
+        .ticket-info {
+            flex: 1;
         }
 
         .ticket-title {
-            font-size: 16px;
+            font-weight: 600;
             color: #333;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
         }
 
-        .ticket-description {
+        .ticket-meta {
+            font-size: 12px;
             color: #666;
-            font-size: 14px;
-            line-height: 1.4;
+        }
+
+        .ticket-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .status-testing {
+            background: #FFF3E0;
+            color: #F57C00;
+            border: 1px solid #FFB74D;
+        }
+
+        .status-completed {
+            background: #E8F5E8;
+            color: #2E7D32;
+            border: 1px solid #81C784;
+        }
+
+        .status-pending {
+            background: #E3F2FD;
+            color: #1565C0;
+            border: 1px solid #64B5F6;
+        }
+
+        .status-failed {
+            background: #FFEBEE;
+            color: #C62828;
+            border: 1px solid #EF5350;
         }
 
         .refresh-btn {
-            background: linear-gradient(135deg, #2196F3, #1976D2);
-            color: white;
+            padding: 8px 16px;
             border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
-            margin-bottom: 20px;
+            font-weight: 500;
             transition: all 0.3s ease;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
         }
 
         .refresh-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
     </style>
 </head>
 <body>
     <div class="app-container">
-        <div class="header">
+        <div class="toolbar">
             <h1>工单管理系统</h1>
+            <button class="refresh-btn" onclick="refreshData()">刷新数据</button>
         </div>
         
         <div class="main-content">
             <div class="sidebar">
-                <h3>工单统计</h3>
-                <div id="statusStats">
-                    <!-- 状态统计将在这里动态生成 -->
+                <h2>工单统计</h2>
+                <div class="status-stats" id="statusStats">
+                    <!-- 统计数据将通过 JavaScript 动态生成 -->
                 </div>
-                <button class="refresh-btn" onclick="refreshData()">刷新数据</button>
             </div>
             
             <div class="content-area">
-                <h3>工单列表</h3>
-                <div id="ticketList" class="ticket-list">
-                    <!-- 工单列表将在这里动态生成 -->
+                <div class="ticket-list">
+                    <h2>工单列表</h2>
+                    <div id="ticketList">
+                        <!-- 工单列表将通过 JavaScript 动态生成 -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -212,238 +247,239 @@
         const TICKET_STATUS = {
             PENDING: 'pending',
             TESTING: 'testing', 
-            COMPLETED: 'completed'
+            COMPLETED: 'completed',
+            FAILED: 'failed'
         };
 
-        // 状态显示配置
-        const STATUS_CONFIG = {
-            [TICKET_STATUS.PENDING]: {
-                label: '待处理',
-                class: 'pending',
-                color: '#2196f3'
-            },
-            [TICKET_STATUS.TESTING]: {
-                label: '测试中',
-                class: 'testing',
-                color: '#ff9800'
-            },
-            [TICKET_STATUS.COMPLETED]: {
-                label: '已完成',
-                class: 'completed', 
-                color: '#4caf50'
-            }
+        // 状态显示映射
+        const STATUS_DISPLAY = {
+            [TICKET_STATUS.PENDING]: '待处理',
+            [TICKET_STATUS.TESTING]: '测试中',
+            [TICKET_STATUS.COMPLETED]: '已完成',
+            [TICKET_STATUS.FAILED]: '测试失败'
         };
 
         // 模拟工单数据
-        let tickets = [
+        let ticketData = [
             {
                 id: 'T001',
                 title: '用户登录功能优化',
                 description: '优化用户登录流程，提升用户体验',
                 status: TICKET_STATUS.COMPLETED,
-                lastUpdated: '2024-01-15 14:30'
+                assignee: '张三',
+                createTime: '2024-01-15 09:30:00',
+                updateTime: '2024-01-16 14:20:00'
             },
             {
                 id: 'T002', 
                 title: '数据库性能调优',
                 description: '优化数据库查询性能，减少响应时间',
                 status: TICKET_STATUS.TESTING,
-                lastUpdated: '2024-01-15 16:20'
+                assignee: '李四',
+                createTime: '2024-01-16 10:15:00',
+                updateTime: '2024-01-17 16:45:00'
             },
             {
                 id: 'T003',
-                title: '移动端适配问题',
+                title: '移动端适配问题修复', 
                 description: '修复移动端页面显示异常问题',
                 status: TICKET_STATUS.PENDING,
-                lastUpdated: '2024-01-15 10:15'
+                assignee: '王五',
+                createTime: '2024-01-17 11:20:00',
+                updateTime: '2024-01-17 11:20:00'
             },
             {
                 id: 'T004',
                 title: '支付接口集成',
                 description: '集成第三方支付接口，支持多种支付方式',
-                status: TICKET_STATUS.COMPLETED,
-                lastUpdated: '2024-01-14 18:45'
-            },
-            {
-                id: 'T005',
-                title: '邮件通知功能',
-                description: '实现系统邮件通知功能',
-                status: TICKET_STATUS.TESTING,
-                lastUpdated: '2024-01-15 12:00'
+                status: TICKET_STATUS.FAILED,
+                assignee: '赵六',
+                createTime: '2024-01-18 08:45:00',
+                updateTime: '2024-01-18 17:30:00'
             }
         ];
 
-        // 获取状态统计
+        // 添加更多测试数据以达到描述中的数量
+        for (let i = 5; i <= 35; i++) {
+            const statuses = [TICKET_STATUS.TESTING, TICKET_STATUS.COMPLETED, TICKET_STATUS.PENDING, TICKET_STATUS.FAILED];
+            const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+            
+            ticketData.push({
+                id: `T${String(i).padStart(3, '0')}`,
+                title: `工单任务 ${i}`,
+                description: `这是第 ${i} 个工单任务的描述`,
+                status: randomStatus,
+                assignee: ['张三', '李四', '王五', '赵六', '钱七', '孙八'][Math.floor(Math.random() * 6)],
+                createTime: `2024-01-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')} ${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:00`,
+                updateTime: `2024-01-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')} ${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:00`
+            });
+        }
+
+        // 确保有31个测试中的工单
+        let testingCount = ticketData.filter(ticket => ticket.status === TICKET_STATUS.TESTING).length;
+        let index = 0;
+        while (testingCount < 31 && index < ticketData.length) {
+            if (ticketData[index].status !== TICKET_STATUS.TESTING) {
+                ticketData[index].status = TICKET_STATUS.TESTING;
+                testingCount++;
+            }
+            index++;
+        }
+
+        /**
+         * 统计各状态工单数量
+         * @returns {Object} 状态统计对象
+         */
         function getStatusStats() {
             const stats = {
                 [TICKET_STATUS.PENDING]: 0,
                 [TICKET_STATUS.TESTING]: 0,
-                [TICKET_STATUS.COMPLETED]: 0
+                [TICKET_STATUS.COMPLETED]: 0,
+                [TICKET_STATUS.FAILED]: 0
             };
-            
-            tickets.forEach(ticket => {
+
+            ticketData.forEach(ticket => {
                 if (stats.hasOwnProperty(ticket.status)) {
                     stats[ticket.status]++;
                 }
             });
-            
+
             return stats;
         }
 
-        // 渲染状态统计
+        /**
+         * 渲染状态统计
+         */
         function renderStatusStats() {
             const stats = getStatusStats();
-            const container = document.getElementById('statusStats');
+            const statsContainer = document.getElementById('statusStats');
             
-            container.innerHTML = '';
-            
-            Object.keys(STATUS_CONFIG).forEach(status => {
-                const config = STATUS_CONFIG[status];
-                const count = stats[status] || 0;
+            const statsHtml = Object.entries(stats).map(([status, count]) => {
+                const displayName = STATUS_DISPLAY[status];
+                const cssClass = status;
                 
-                const statusItem = document.createElement('div');
-                statusItem.className = `status-item ${config.class}`;
-                statusItem.innerHTML = `
-                    <span>${config.label}</span>
-                    <span class="status-count">${count}</span>
+                return `
+                    <div class="stat-item ${cssClass}">
+                        <span class="stat-label">${displayName}</span>
+                        <span class="stat-count">${count}</span>
+                    </div>
                 `;
-                
-                container.appendChild(statusItem);
-            });
+            }).join('');
+            
+            statsContainer.innerHTML = statsHtml;
         }
 
-        // 渲染工单列表
+        /**
+         * 渲染工单列表
+         */
         function renderTicketList() {
-            const container = document.getElementById('ticketList');
+            const ticketListContainer = document.getElementById('ticketList');
             
-            container.innerHTML = '';
-            
-            tickets.forEach(ticket => {
-                const config = STATUS_CONFIG[ticket.status];
+            const ticketsHtml = ticketData.map(ticket => {
+                const statusDisplay = STATUS_DISPLAY[ticket.status];
+                const statusClass = `status-${ticket.status}`;
                 
-                const ticketCard = document.createElement('div');
-                ticketCard.className = 'ticket-card';
-                ticketCard.innerHTML = `
-                    <div class="ticket-header">
-                        <span class="ticket-id">${ticket.id}</span>
-                        <span class="ticket-status status-${config.class}">${config.label}</span>
-                    </div>
-                    <div class="ticket-title">${ticket.title}</div>
-                    <div class="ticket-description">${ticket.description}</div>
-                    <div style="margin-top: 10px; font-size: 12px; color: #999;">
-                        最后更新: ${ticket.lastUpdated}
+                return `
+                    <div class="ticket-item">
+                        <div class="ticket-info">
+                            <div class="ticket-title">${ticket.title}</div>
+                            <div class="ticket-meta">
+                                工单号: ${ticket.id} | 负责人: ${ticket.assignee} | 更新时间: ${ticket.updateTime}
+                            </div>
+                        </div>
+                        <div class="ticket-status ${statusClass}">
+                            ${statusDisplay}
+                        </div>
                     </div>
                 `;
-                
-                container.appendChild(ticketCard);
-            });
+            }).join('');
+            
+            ticketListContainer.innerHTML = ticketsHtml;
         }
 
-        // 刷新数据
+        /**
+         * 刷新数据
+         */
         function refreshData() {
-            // 模拟数据更新 - 在实际应用中这里会调用API
+            // 模拟数据刷新，这里可以添加从服务器获取数据的逻辑
             console.log('刷新数据...');
             
-            // 确保数据一致性检查
-            validateDataConsistency();
-            
-            // 重新渲染
+            // 重新渲染统计和列表，确保数据一致性
             renderStatusStats();
             renderTicketList();
             
-            // 显示刷新成功提示
-            showNotification('数据已刷新');
+            // 验证数据一致性
+            validateDataConsistency();
         }
 
-        // 数据一致性验证
+        /**
+         * 验证数据一致性
+         */
         function validateDataConsistency() {
             const stats = getStatusStats();
             
-            // 检查每个工单的状态是否在有效范围内
-            tickets.forEach(ticket => {
-                if (!Object.values(TICKET_STATUS).includes(ticket.status)) {
-                    console.warn(`工单 ${ticket.id} 状态异常: ${ticket.status}`);
-                    // 修复异常状态
-                    ticket.status = TICKET_STATUS.PENDING;
+            // 检查左侧统计和右侧列表的数据是否一致
+            Object.entries(stats).forEach(([status, expectedCount]) => {
+                const actualCount = ticketData.filter(ticket => ticket.status === status).length;
+                
+                if (expectedCount !== actualCount) {
+                    console.error(`数据不一致: ${STATUS_DISPLAY[status]} 统计显示 ${expectedCount}，实际有 ${actualCount}`);
+                } else {
+                    console.log(`数据一致性检查通过: ${STATUS_DISPLAY[status]} ${actualCount} 个`);
                 }
             });
-            
-            // 验证统计数据与实际工单数据一致性
-            const totalTickets = tickets.length;
-            const totalStats = Object.values(stats).reduce((sum, count) => sum + count, 0);
-            
-            if (totalTickets !== totalStats) {
-                console.error('数据不一致: 工单总数与统计不匹配');
-            }
         }
 
-        // 显示通知
-        function showNotification(message) {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: #4caf50;
-                color: white;
-                padding: 12px 20px;
-                border-radius: 6px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                z-index: 9999;
-                font-size: 14px;
-                transition: all 0.3s ease;
-            `;
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                notification.style.transform = 'translateX(100%)';
-                setTimeout(() => {
-                    document.body.removeChild(notification);
-                }, 300);
-            }, 2000);
+        /**
+         * 更新工单状态
+         * @param {string} ticketId 工单ID
+         * @param {string} newStatus 新状态
+         */
+        function updateTicketStatus(ticketId, newStatus) {
+            const ticket = ticketData.find(t => t.id === ticketId);
+            if (ticket && Object.values(TICKET_STATUS).includes(newStatus)) {
+                ticket.status = newStatus;
+                ticket.updateTime = new Date().toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit', 
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
+                // 立即更新显示，确保左右两侧数据同步
+                renderStatusStats();
+                renderTicketList();
+                
+                console.log(`工单 ${ticketId} 状态已更新为: ${STATUS_DISPLAY[newStatus]}`);
+            } else {
+                console.error(`更新失败: 工单 ${ticketId} 不存在或状态 ${newStatus} 无效`);
+            }
         }
 
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
-            // 初始数据一致性检查
-            validateDataConsistency();
+            console.log('工单管理系统初始化...');
             
-            // 渲染页面
+            // 初始渲染
             renderStatusStats();
             renderTicketList();
             
-            console.log('工单管理系统已加载');
+            // 验证初始数据一致性
+            validateDataConsistency();
+            
+            console.log('系统初始化完成');
         });
 
-        // 模拟状态变更（用于测试）
-        function simulateStatusChange() {
-            if (tickets.length > 0) {
-                const randomTicket = tickets[Math.floor(Math.random() * tickets.length)];
-                const statuses = Object.values(TICKET_STATUS);
-                const newStatus = statuses[Math.floor(Math.random() * statuses.length)];
-                
-                console.log(`模拟工单 ${randomTicket.id} 状态变更: ${randomTicket.status} -> ${newStatus}`);
-                randomTicket.status = newStatus;
-                randomTicket.lastUpdated = new Date().toLocaleString('zh-CN');
-                
-                refreshData();
-            }
-        }
-
-        // 添加键盘快捷键
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'r') {
-                e.preventDefault();
-                refreshData();
-            }
-            if (e.ctrlKey && e.key === 't') {
-                e.preventDefault();
-                simulateStatusChange();
-            }
-        });
+        // 暴露全局方法供调试使用
+        window.ticketSystem = {
+            updateTicketStatus,
+            refreshData,
+            validateDataConsistency,
+            getStatusStats,
+            ticketData
+        };
     </script>
 </body>
 </html>
