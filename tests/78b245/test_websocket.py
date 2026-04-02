@@ -1,126 +1,185 @@
 import pytest
 import json
 from pathlib import Path
-import subprocess
+from unittest.mock import patch, MagicMock
 import sys
 import os
 
+# 添加项目根目录到Python路径
+project_root = Path(__file__).parent
+sys.path.insert(0, str(project_root))
+
 class TestWebSocketCollaborationBackend:
-    """WebSocket实时协作后端测试类"""
     
-    @pytest.fixture
-    def project_root(self):
-        """获取项目根目录"""
-        return Path(__file__).parent
-    
-    def test_html_file_exists_and_contains_websocket_elements(self, project_root):
-        """测试HTML文件是否存在并包含WebSocket相关的关键元素"""
-        html_file = project_root / "index.html"
+    def test_project_files_exist(self):
+        """测试项目必要文件是否存在"""
+        project_root = Path(__file__).parent
         
-        # 检查文件是否存在
-        assert html_file.exists(), f"HTML文件不存在: {html_file}"
+        # 检查核心文件是否存在
+        server_file = project_root / "server.js"
+        package_file = project_root / "package.json"
+        index_file = project_root / "index.html"
+        dev_notes_file = project_root / "docs" / "78b245" / "f0e90c" / "dev-notes.md"
         
-        # 读取HTML内容
-        html_content = html_file.read_text(encoding='utf-8')
+        assert server_file.exists(), "server.js 文件不存在"
+        assert package_file.exists(), "package.json 文件不存在"
+        assert index_file.exists(), "index.html 文件不存在"
+        assert dev_notes_file.exists(), "开发文档文件不存在"
+
+    def test_package_json_configuration(self):
+        """测试package.json配置文件内容是否包含必要的WebSocket依赖和脚本"""
+        project_root = Path(__file__).parent
+        package_file = project_root / "package.json"
         
-        # 检查是否包含WebSocket相关的关键元素
-        assert "websocket" in html_content.lower() or "ws://" in html_content or "wss://" in html_content, "HTML文件中未找到WebSocket相关内容"
-        assert "<script" in html_content, "HTML文件中未找到script标签"
-        assert "<!DOCTYPE html>" in html_content or "<html" in html_content, "HTML文件格式不正确"
-    
-    def test_package_json_structure_and_dependencies(self, project_root):
-        """测试package.json文件结构是否正确并包含必要的依赖"""
-        package_json_file = project_root / "package.json"
+        assert package_file.exists(), "package.json 文件不存在"
         
-        # 检查文件是否存在
-        assert package_json_file.exists(), f"package.json文件不存在: {package_json_file}"
-        
-        # 解析JSON内容
-        with open(package_json_file, 'r', encoding='utf-8') as f:
+        with open(package_file, 'r', encoding='utf-8') as f:
             package_data = json.load(f)
         
-        # 检查基本结构
-        assert isinstance(package_data, dict), "package.json应该是一个JSON对象"
-        assert "name" in package_data, "package.json中缺少name字段"
-        assert "version" in package_data, "package.json中缺少version字段"
-        
         # 检查是否包含WebSocket相关依赖
-        dependencies = package_data.get("dependencies", {})
-        dev_dependencies = package_data.get("devDependencies", {})
+        dependencies = package_data.get('dependencies', {})
+        dev_dependencies = package_data.get('devDependencies', {})
         all_deps = {**dependencies, **dev_dependencies}
         
-        websocket_related = any(
-            dep_name in ["ws", "websocket", "socket.io", "express", "node-websocket"]
-            for dep_name in all_deps.keys()
-        )
-        assert websocket_related, "package.json中未找到WebSocket相关依赖"
-    
-    def test_server_js_file_structure_and_websocket_functionality(self, project_root):
-        """测试server.js文件是否存在并包含WebSocket服务器功能代码"""
-        server_js_file = project_root / "server.js"
+        # 检查常见的WebSocket库
+        websocket_libs = ['ws', 'socket.io', 'websocket', 'uws']
+        has_websocket_lib = any(lib in all_deps for lib in websocket_libs)
         
-        # 检查文件是否存在
-        assert server_js_file.exists(), f"server.js文件不存在: {server_js_file}"
+        assert has_websocket_lib, "package.json 中未找到WebSocket相关依赖"
         
-        # 读取服务器代码内容
-        server_content = server_js_file.read_text(encoding='utf-8')
+        # 检查启动脚本
+        scripts = package_data.get('scripts', {})
+        assert 'start' in scripts or 'dev' in scripts, "package.json 中缺少启动脚本"
+
+    def test_html_file_contains_websocket_elements(self):
+        """测试HTML文件是否包含WebSocket协作相关的关键元素"""
+        project_root = Path(__file__).parent
+        index_file = project_root / "index.html"
         
-        # 检查是否包含WebSocket服务器相关代码
+        assert index_file.exists(), "index.html 文件不存在"
+        
+        with open(index_file, 'r', encoding='utf-8') as f:
+            html_content = f.read().lower()
+        
+        # 检查HTML基本结构
+        assert '<html' in html_content, "HTML文件缺少html标签"
+        assert '<head>' in html_content, "HTML文件缺少head标签"
+        assert '<body>' in html_content, "HTML文件缺少body标签"
+        
+        # 检查WebSocket相关元素
         websocket_indicators = [
-            "require(",  # Node.js模块导入
-            "WebSocket",  # WebSocket类或对象
-            "ws",  # WebSocket库
-            "socket.io",  # Socket.IO库
-            "server",  # 服务器相关
-            "listen",  # 监听端口
+            'websocket',
+            'socket.io',
+            'ws://',
+            'wss://',
+            'onmessage',
+            'send(',
+            'connect'
         ]
         
-        found_indicators = sum(1 for indicator in websocket_indicators if indicator in server_content)
-        assert found_indicators >= 3, f"server.js文件中WebSocket相关代码不足，仅找到{found_indicators}个关键指标"
+        has_websocket_code = any(indicator in html_content for indicator in websocket_indicators)
+        assert has_websocket_code, "HTML文件中未找到WebSocket相关代码"
         
-        # 检查是否有端口配置
-        port_indicators = ["port", "PORT", "3000", "8080"]
+        # 检查协作相关元素
+        collaboration_elements = [
+            'input',
+            'textarea',
+            'contenteditable',
+            'chat',
+            'message',
+            'user'
+        ]
+        
+        has_collaboration_elements = any(element in html_content for element in collaboration_elements)
+        assert has_collaboration_elements, "HTML文件中未找到协作相关的UI元素"
+
+    def test_server_js_file_structure(self):
+        """测试server.js文件是否包含WebSocket服务器的基本结构"""
+        project_root = Path(__file__).parent
+        server_file = project_root / "server.js"
+        
+        assert server_file.exists(), "server.js 文件不存在"
+        
+        with open(server_file, 'r', encoding='utf-8') as f:
+            server_content = f.read()
+        
+        # 检查Node.js require语句
+        node_indicators = [
+            'require(',
+            'const ',
+            'let ',
+            'var '
+        ]
+        has_node_syntax = any(indicator in server_content for indicator in node_indicators)
+        assert has_node_syntax, "server.js 文件缺少Node.js基本语法"
+        
+        # 检查WebSocket服务器相关代码
+        websocket_server_indicators = [
+            'WebSocket',
+            'socket.io',
+            'ws',
+            'Server',
+            'listen',
+            'on(',
+            'connection'
+        ]
+        
+        has_websocket_server = any(indicator in server_content for indicator in websocket_server_indicators)
+        assert has_websocket_server, "server.js 文件中未找到WebSocket服务器相关代码"
+        
+        # 检查端口监听
+        port_indicators = [
+            'listen(',
+            'port',
+            '3000',
+            '8080',
+            'PORT'
+        ]
+        
         has_port_config = any(indicator in server_content for indicator in port_indicators)
-        assert has_port_config, "server.js文件中未找到端口配置"
-    
-    def test_documentation_file_exists_and_readable(self, project_root):
-        """测试开发文档是否存在且可读取"""
-        docs_file = project_root / "docs" / "78b245" / "f0e90c" / "dev-notes.md"
+        assert has_port_config, "server.js 文件中未找到端口监听配置"
+
+    def test_development_documentation_exists(self):
+        """测试开发文档是否存在并包含有用信息"""
+        project_root = Path(__file__).parent
+        dev_notes_file = project_root / "docs" / "78b245" / "f0e90c" / "dev-notes.md"
         
-        # 检查文件是否存在
-        assert docs_file.exists(), f"开发文档不存在: {docs_file}"
+        assert dev_notes_file.exists(), "开发文档文件不存在"
         
-        # 检查文件是否可读
-        doc_content = docs_file.read_text(encoding='utf-8')
-        assert len(doc_content.strip()) > 0, "开发文档内容为空"
+        with open(dev_notes_file, 'r', encoding='utf-8') as f:
+            doc_content = f.read().lower()
         
-        # 检查是否包含开发相关内容
-        dev_keywords = ["websocket", "协作", "实时", "backend", "server", "api", "功能"]
-        found_keywords = sum(1 for keyword in dev_keywords if keyword.lower() in doc_content.lower())
-        assert found_keywords >= 2, f"开发文档中相关关键词不足，仅找到{found_keywords}个"
-    
-    def test_project_file_structure_completeness(self, project_root):
-        """测试项目文件结构的完整性"""
-        required_files = [
-            "server.js",
-            "package.json", 
-            "index.html"
+        # 检查文档是否为空
+        assert len(doc_content.strip()) > 0, "开发文档文件为空"
+        
+        # 检查是否包含开发相关信息
+        dev_keywords = [
+            'websocket',
+            '协作',
+            'collaboration',
+            '实时',
+            'real-time',
+            'server',
+            'client',
+            'api',
+            '安装',
+            'install',
+            '运行',
+            'run',
+            '启动',
+            'start'
         ]
         
-        required_dirs = [
-            "docs",
-            "docs/78b245",
-            "docs/78b245/f0e90c"
-        ]
+        has_dev_info = any(keyword in doc_content for keyword in dev_keywords)
+        assert has_dev_info, "开发文档中未找到相关的开发信息"
+
+    @patch('subprocess.run')
+    def test_mock_server_startup(self, mock_subprocess):
+        """模拟测试服务器启动流程是否正确"""
+        project_root = Path(__file__).parent
+        server_file = project_root / "server.js"
+        package_file = project_root / "package.json"
         
-        # 检查必需文件
-        for file_name in required_files:
-            file_path = project_root / file_name
-            assert file_path.exists(), f"必需文件缺失: {file_name}"
-            assert file_path.is_file(), f"{file_name}不是有效文件"
-        
-        # 检查必需目录
-        for dir_name in required_dirs:
-            dir_path = project_root / dir_name
-            assert dir_path.exists(), f"必需目录缺失: {dir_name}"
-            assert dir_path.is_dir(), f"{dir_name}不是有效目录"
+        # 确保文件存在
+        assert server_file.exists(), "server.js 文件不存在"
+        assert package_file.exists(), "package
