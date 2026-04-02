@@ -1,4 +1,4 @@
-"""测试: 开发工具链配置"""
+"""测试: 测试框架搭建"""
 from pathlib import Path
 
 REPO_DIR = Path(__file__).parent.parent
