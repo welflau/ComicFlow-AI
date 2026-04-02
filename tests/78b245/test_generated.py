@@ -1,89 +1,88 @@
 import pytest
 from pathlib import Path
-from bs4 import BeautifulSoup
+import os
 
-class TestFrontendModule:
+class TestFrontendWorkflowInterface:
     
-    def test_index_html_file_exists(self):
-        """测试 index.html 文件是否存在"""
-        index_file = Path("frontend") / "index.html"
-        assert index_file.exists(), f"index.html 文件不存在: {index_file}"
-        assert index_file.is_file(), f"index.html 不是一个有效文件: {index_file}"
+    def test_feature_497_js_file_exists(self):
+        """测试前端工作流执行界面的核心JavaScript文件是否存在"""
+        project_root = Path(__file__).parent.parent
+        feature_file = project_root / "frontend" / "src" / "feature_497.js"
+        assert feature_file.exists(), f"核心功能文件 {feature_file} 不存在"
+        assert feature_file.is_file(), f"{feature_file} 不是一个有效的文件"
     
-    def test_index_html_contains_essential_elements(self):
-        """测试 index.html 文件包含必要的HTML元素"""
-        index_file = Path("frontend") / "index.html"
+    def test_feature_497_js_contains_workflow_elements(self):
+        """测试JavaScript文件包含工作流执行界面的关键代码元素"""
+        project_root = Path(__file__).parent.parent
+        feature_file = project_root / "frontend" / "src" / "feature_497.js"
         
-        with open(index_file, 'r', encoding='utf-8') as f:
-            content = f.read()
-        
-        soup = BeautifulSoup(content, 'html.parser')
-        
-        # 检查基本HTML结构
-        assert soup.find('html') is not None, "缺少 <html> 标签"
-        assert soup.find('head') is not None, "缺少 <head> 标签"
-        assert soup.find('body') is not None, "缺少 <body> 标签"
-        
-        # 检查连线系统相关元素
-        title = soup.find('title')
-        assert title is not None, "缺少 <title> 标签"
-        
-        # 检查是否包含连线系统相关的关键词
-        page_text = content.lower()
-        connection_keywords = ['连线', 'connection', 'link', 'connect']
-        has_connection_keyword = any(keyword in page_text for keyword in connection_keywords)
-        assert has_connection_keyword, "页面内容中未找到连线系统相关关键词"
+        if feature_file.exists():
+            content = feature_file.read_text(encoding='utf-8')
+            
+            # 检查工作流相关的关键词
+            workflow_keywords = [
+                'workflow',
+                'execute',
+                'function',
+                'addEventListener',
+                'querySelector'
+            ]
+            
+            found_keywords = []
+            for keyword in workflow_keywords:
+                if keyword in content.lower():
+                    found_keywords.append(keyword)
+            
+            assert len(found_keywords) >= 2, f"JavaScript文件应包含工作流相关关键词，找到: {found_keywords}"
+        else:
+            pytest.skip("JavaScript文件不存在，跳过内容检查")
     
     def test_dev_notes_documentation_exists(self):
         """测试开发文档是否存在并包含有效内容"""
-        dev_notes_file = Path("docs") / "78b245" / "7d7081" / "dev-notes.md"
+        project_root = Path(__file__).parent.parent
+        docs_file = project_root / "frontend" / "docs" / "78b245" / "33bf13" / "dev-notes.md"
         
-        assert dev_notes_file.exists(), f"开发文档不存在: {dev_notes_file}"
-        assert dev_notes_file.is_file(), f"开发文档不是有效文件: {dev_notes_file}"
+        assert docs_file.exists(), f"开发文档 {docs_file} 不存在"
+        assert docs_file.is_file(), f"{docs_file} 不是一个有效的文件"
         
-        with open(dev_notes_file, 'r', encoding='utf-8') as f:
-            content = f.read()
+        content = docs_file.read_text(encoding='utf-8')
+        assert len(content.strip()) > 0, "开发文档不能为空"
         
-        # 检查文档不为空
-        assert len(content.strip()) > 0, "开发文档内容为空"
-        
-        # 检查是否包含开发相关的关键词
-        dev_keywords = ['开发', 'development', 'dev', '功能', 'feature', '模块', 'module']
-        content_lower = content.lower()
-        has_dev_keyword = any(keyword in content_lower for keyword in dev_keywords)
-        assert has_dev_keyword, "开发文档中未找到开发相关关键词"
+        # 检查是否包含常见的文档标记
+        doc_indicators = ['#', '##', '###', '-', '*', 'feature', 'workflow', 'interface']
+        has_doc_structure = any(indicator in content for indicator in doc_indicators)
+        assert has_doc_structure, "开发文档应包含基本的文档结构标记"
     
     def test_frontend_directory_structure(self):
-        """测试前端目录结构的完整性"""
-        frontend_dir = Path("frontend")
-        docs_dir = Path("docs")
+        """测试前端项目目录结构的完整性"""
+        project_root = Path(__file__).parent.parent
+        frontend_dir = project_root / "frontend"
         
-        assert frontend_dir.exists(), "frontend 目录不存在"
-        assert frontend_dir.is_dir(), "frontend 不是一个目录"
+        assert frontend_dir.exists(), "frontend目录必须存在"
+        assert frontend_dir.is_dir(), "frontend必须是一个目录"
         
-        assert docs_dir.exists(), "docs 目录不存在"
-        assert docs_dir.is_dir(), "docs 不是一个目录"
+        # 检查关键目录结构
+        src_dir = frontend_dir / "src"
+        docs_dir = frontend_dir / "docs"
         
-        # 检查文档目录结构
-        nested_docs_dir = docs_dir / "78b245" / "7d7081"
-        assert nested_docs_dir.exists(), f"嵌套文档目录不存在: {nested_docs_dir}"
-        assert nested_docs_dir.is_dir(), f"嵌套文档路径不是目录: {nested_docs_dir}"
+        assert src_dir.exists() or docs_dir.exists(), "至少应存在src或docs目录之一"
+        
+        if src_dir.exists():
+            js_files = list(src_dir.glob("*.js"))
+            assert len(js_files) > 0, "src目录应包含至少一个JavaScript文件"
     
-    def test_index_html_has_interactive_elements(self):
-        """测试 index.html 包含交互元素，适合连线系统功能"""
-        index_file = Path("frontend") / "index.html"
+    def test_file_permissions_and_accessibility(self):
+        """测试文件权限和可访问性"""
+        project_root = Path(__file__).parent.parent
+        files_to_check = [
+            project_root / "frontend" / "src" / "feature_497.js",
+            project_root / "frontend" / "docs" / "78b245" / "33bf13" / "dev-notes.md"
+        ]
         
-        with open(index_file, 'r', encoding='utf-8') as f:
-            content = f.read()
+        accessible_files = []
+        for file_path in files_to_check:
+            if file_path.exists():
+                assert os.access(file_path, os.R_OK), f"文件 {file_path} 应该是可读的"
+                accessible_files.append(file_path)
         
-        soup = BeautifulSoup(content, 'html.parser')
-        
-        # 检查是否有JavaScript相关元素（连线系统通常需要交互）
-        scripts = soup.find_all('script')
-        canvas_elements = soup.find_all('canvas')
-        svg_elements = soup.find_all('svg')
-        div_elements = soup.find_all('div')
-        
-        # 至少应该有一些交互元素或容器
-        interactive_elements_count = len(scripts) + len(canvas_elements) + len(svg_elements) + len(div_elements)
-        assert interactive_elements_count > 0, "页面缺少交互元素，连线系统需要JavaScript、Canvas、SVG或容器元素"
+        assert len(accessible_files) > 0, "至少应有一个项目文件存在且可访问"
