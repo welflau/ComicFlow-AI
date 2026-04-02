@@ -1,5 +1,5 @@
 """
-对象存储服务集成 - 后端服务
+消息队列系统搭建 - 后端服务
 """
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 import json
@@ -10,7 +10,7 @@ class APIHandler(SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            self.wfile.write(json.dumps({"status": "ok", "service": "feature_4756"}).encode())
+            self.wfile.write(json.dumps({"status": "ok", "service": "feature_1567"}).encode())
         else:
             super().do_GET()
 
