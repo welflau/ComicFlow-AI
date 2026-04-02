@@ -1,8 +1,8 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const cors = require('cors');
 const path = require('path');
+const fs = require('fs').promises;
 
 const app = express();
 const server = http.createServer(app);
@@ -13,423 +13,361 @@ const io = socketIo(server, {
   }
 });
 
-// 中间件
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+// 静态文件服务
+app.use(express.static(path.join(__dirname)));
 
-// 协作会话管理器
-class CollaborationSessionManager {
+// 协作状态管理器
+class CollaborationStateManager {
   constructor() {
-    this.sessions = new Map(); // canvasId -> session
-    this.userSessions = new Map(); // socketId -> canvasId
+    this.canvasStates = new Map(); // canvasId -> state
+    this.usersInCanvas = new Map(); // canvasId -> Set of users
+    this.userSockets = new Map(); // socketId -> user info
   }
 
-  createSession(canvasId) {
-    if (!this.sessions.has(canvasId)) {
-      this.sessions.set(canvasId, {
-        id: canvasId,
-        users: new Map(),
-        canvasState: {
-          nodes: [],
-          connections: []
-        },
-        operations: [],
-        lastUpdate: Date.now()
+  getCanvasState(canvasId) {
+    if (!this.canvasStates.has(canvasId)) {
+      this.canvasStates.set(canvasId, {
+        nodes: new Map(),
+        connections: new Map(),
+        lastUpdated: Date.now()
       });
     }
-    return this.sessions.get(canvasId);
+    return this.canvasStates.get(canvasId);
   }
 
-  getUsersInSession(canvasId) {
-    const session = this.sessions.get(canvasId);
-    return session ? Array.from(session.users.values()) : [];
-  }
-
-  addUserToSession(socketId, canvasId, userInfo) {
-    const session = this.createSession(canvasId);
-    session.users.set(socketId, {
-      socketId,
-      ...userInfo,
-      joinedAt: Date.now()
-    });
-    this.userSessions.set(socketId, canvasId);
-    return session;
-  }
-
-  removeUserFromSession(socketId) {
-    const canvasId = this.userSessions.get(socketId);
-    if (canvasId) {
-      const session = this.sessions.get(canvasId);
-      if (session) {
-        session.users.delete(socketId);
-        if (session.users.size === 0) {
-          // 如果没有用户了，可以选择保留会话或删除
-          // this.sessions.delete(canvasId);
+  updateCanvasState(canvasId, operation) {
+    const state = this.getCanvasState(canvasId);
+    
+    switch (operation.type) {
+      case 'node-create':
+        state.nodes.set(operation.data.id, operation.data);
+        break;
+      case 'node-update':
+        if (state.nodes.has(operation.data.id)) {
+          const existingNode = state.nodes.get(operation.data.id);
+          state.nodes.set(operation.data.id, { ...existingNode, ...operation.data });
         }
-      }
-      this.userSessions.delete(socketId);
+        break;
+      case 'node-delete':
+        state.nodes.delete(operation.data.id);
+        // 删除相关连接
+        for (let [connId, conn] of state.connections) {
+          if (conn.sourceId === operation.data.id || conn.targetId === operation.data.id) {
+            state.connections.delete(connId);
+          }
+        }
+        break;
+      case 'connection-create':
+        state.connections.set(operation.data.id, operation.data);
+        break;
+      case 'connection-delete':
+        state.connections.delete(operation.data.id);
+        break;
     }
-    return canvasId;
+    
+    state.lastUpdated = Date.now();
+    return state;
   }
 
-  handleConflict(canvasId, operation) {
-    const session = this.sessions.get(canvasId);
-    if (!session) return null;
+  getUsersInCanvas(canvasId) {
+    return Array.from(this.usersInCanvas.get(canvasId) || []);
+  }
 
-    // 简单的冲突解决：最后写入获胜
-    session.operations.push({
-      ...operation,
+  addUserToCanvas(canvasId, socketId, userInfo) {
+    if (!this.usersInCanvas.has(canvasId)) {
+      this.usersInCanvas.set(canvasId, new Set());
+    }
+    this.usersInCanvas.get(canvasId).add(socketId);
+    this.userSockets.set(socketId, { ...userInfo, canvasId });
+  }
+
+  removeUserFromCanvas(socketId) {
+    const userInfo = this.userSockets.get(socketId);
+    if (userInfo) {
+      const canvasUsers = this.usersInCanvas.get(userInfo.canvasId);
+      if (canvasUsers) {
+        canvasUsers.delete(socketId);
+      }
+      this.userSockets.delete(socketId);
+    }
+    return userInfo;
+  }
+
+  resolveConflict(operation1, operation2) {
+    // 简单的时间戳冲突解决策略
+    return operation1.timestamp > operation2.timestamp ? operation1 : operation2;
+  }
+}
+
+// 消息处理器
+class MessageHandler {
+  constructor(stateManager, persistenceService) {
+    this.stateManager = stateManager;
+    this.persistenceService = persistenceService;
+  }
+
+  handleNodeMove(canvasId, data, socket) {
+    const operation = {
+      type: 'node-update',
+      data: { id: data.nodeId, x: data.x, y: data.y },
       timestamp: Date.now(),
-      id: this.generateOperationId()
+      userId: socket.id
+    };
+    
+    this.stateManager.updateCanvasState(canvasId, operation);
+    socket.to(canvasId).emit('node-moved', {
+      nodeId: data.nodeId,
+      x: data.x,
+      y: data.y,
+      userId: socket.id
     });
-
-    // 保留最近100个操作
-    if (session.operations.length > 100) {
-      session.operations = session.operations.slice(-100);
-    }
-
-    return operation;
+    
+    this.persistenceService.logOperation(canvasId, operation);
   }
 
-  syncCanvasState(canvasId, state) {
-    const session = this.sessions.get(canvasId);
-    if (session) {
-      session.canvasState = { ...state };
-      session.lastUpdate = Date.now();
-    }
-  }
-
-  generateOperationId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-  }
-}
-
-// 操作事件处理器
-class OperationEventHandler {
-  constructor(sessionManager, dataPersistence) {
-    this.sessionManager = sessionManager;
-    this.dataPersistence = dataPersistence;
-  }
-
-  handleNodeCreate(canvasId, nodeData, userId) {
+  handleNodeCreate(canvasId, data, socket) {
+    const nodeData = {
+      id: data.id || `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: data.type,
+      x: data.x,
+      y: data.y,
+      title: data.title,
+      createdBy: socket.id,
+      createdAt: Date.now()
+    };
+    
     const operation = {
-      type: 'node_create',
-      canvasId,
-      userId,
+      type: 'node-create',
       data: nodeData,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      userId: socket.id
     };
-
-    const resolvedOperation = this.sessionManager.handleConflict(canvasId, operation);
-    if (resolvedOperation) {
-      // 更新会话状态
-      const session = this.sessionManager.sessions.get(canvasId);
-      if (session) {
-        session.canvasState.nodes.push(nodeData);
-      }
-      
-      // 异步保存
-      this.dataPersistence.saveOperation(operation);
-    }
-
-    return resolvedOperation;
+    
+    this.stateManager.updateCanvasState(canvasId, operation);
+    socket.to(canvasId).emit('node-created', nodeData);
+    
+    this.persistenceService.logOperation(canvasId, operation);
+    return nodeData;
   }
 
-  handleNodeUpdate(canvasId, nodeData, userId) {
+  handleNodeDelete(canvasId, data, socket) {
     const operation = {
-      type: 'node_update',
-      canvasId,
-      userId,
-      data: nodeData,
-      timestamp: Date.now()
+      type: 'node-delete',
+      data: { id: data.nodeId },
+      timestamp: Date.now(),
+      userId: socket.id
     };
-
-    const resolvedOperation = this.sessionManager.handleConflict(canvasId, operation);
-    if (resolvedOperation) {
-      // 更新会话状态
-      const session = this.sessionManager.sessions.get(canvasId);
-      if (session) {
-        const nodeIndex = session.canvasState.nodes.findIndex(n => n.id === nodeData.id);
-        if (nodeIndex !== -1) {
-          session.canvasState.nodes[nodeIndex] = { ...session.canvasState.nodes[nodeIndex], ...nodeData };
-        }
-      }
-      
-      this.dataPersistence.saveOperation(operation);
-    }
-
-    return resolvedOperation;
+    
+    this.stateManager.updateCanvasState(canvasId, operation);
+    socket.to(canvasId).emit('node-deleted', { nodeId: data.nodeId, userId: socket.id });
+    
+    this.persistenceService.logOperation(canvasId, operation);
   }
 
-  handleNodeDelete(canvasId, nodeId, userId) {
-    const operation = {
-      type: 'node_delete',
-      canvasId,
-      userId,
-      data: { nodeId },
-      timestamp: Date.now()
+  handleConnection(canvasId, data, socket) {
+    const connectionData = {
+      id: data.id || `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      sourceId: data.sourceId,
+      targetId: data.targetId,
+      createdBy: socket.id,
+      createdAt: Date.now()
     };
-
-    const resolvedOperation = this.sessionManager.handleConflict(canvasId, operation);
-    if (resolvedOperation) {
-      // 更新会话状态
-      const session = this.sessionManager.sessions.get(canvasId);
-      if (session) {
-        session.canvasState.nodes = session.canvasState.nodes.filter(n => n.id !== nodeId);
-        session.canvasState.connections = session.canvasState.connections.filter(
-          c => c.sourceId !== nodeId && c.targetId !== nodeId
-        );
-      }
-      
-      this.dataPersistence.saveOperation(operation);
-    }
-
-    return resolvedOperation;
-  }
-
-  handleConnectionCreate(canvasId, connectionData, userId) {
+    
     const operation = {
-      type: 'connection_create',
-      canvasId,
-      userId,
+      type: 'connection-create',
       data: connectionData,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      userId: socket.id
     };
-
-    const resolvedOperation = this.sessionManager.handleConflict(canvasId, operation);
-    if (resolvedOperation) {
-      // 更新会话状态
-      const session = this.sessionManager.sessions.get(canvasId);
-      if (session) {
-        session.canvasState.connections.push(connectionData);
-      }
-      
-      this.dataPersistence.saveOperation(operation);
-    }
-
-    return resolvedOperation;
+    
+    this.stateManager.updateCanvasState(canvasId, operation);
+    socket.to(canvasId).emit('connection-created', connectionData);
+    
+    this.persistenceService.logOperation(canvasId, operation);
+    return connectionData;
   }
 }
 
-// 数据持久化服务（内存版本，生产环境应使用数据库）
-class DataPersistenceService {
+// 持久化服务
+class PersistenceService {
   constructor() {
-    this.canvasStates = new Map();
-    this.operations = [];
+    this.dataDir = path.join(__dirname, 'data');
+    this.ensureDataDir();
+  }
+
+  async ensureDataDir() {
+    try {
+      await fs.mkdir(this.dataDir, { recursive: true });
+    } catch (error) {
+      console.error('Failed to create data directory:', error);
+    }
   }
 
   async saveCanvasState(canvasId, state) {
-    this.canvasStates.set(canvasId, {
-      ...state,
-      lastSaved: Date.now()
-    });
-    return true;
+    try {
+      const filePath = path.join(this.dataDir, `canvas_${canvasId}.json`);
+      const serializedState = {
+        nodes: Object.fromEntries(state.nodes),
+        connections: Object.fromEntries(state.connections),
+        lastUpdated: state.lastUpdated
+      };
+      await fs.writeFile(filePath, JSON.stringify(serializedState, null, 2));
+    } catch (error) {
+      console.error('Failed to save canvas state:', error);
+    }
   }
 
   async loadCanvasState(canvasId) {
-    return this.canvasStates.get(canvasId) || {
-      nodes: [],
-      connections: [],
-      lastSaved: Date.now()
-    };
-  }
-
-  async saveOperation(operation) {
-    this.operations.push(operation);
-    // 保留最近1000个操作
-    if (this.operations.length > 1000) {
-      this.operations = this.operations.slice(-1000);
+    try {
+      const filePath = path.join(this.dataDir, `canvas_${canvasId}.json`);
+      const data = await fs.readFile(filePath, 'utf8');
+      const parsed = JSON.parse(data);
+      return {
+        nodes: new Map(Object.entries(parsed.nodes)),
+        connections: new Map(Object.entries(parsed.connections)),
+        lastUpdated: parsed.lastUpdated
+      };
+    } catch (error) {
+      console.log('No existing canvas state found, creating new one');
+      return {
+        nodes: new Map(),
+        connections: new Map(),
+        lastUpdated: Date.now()
+      };
     }
-    return true;
   }
 
-  async getOperationHistory(canvasId, limit = 50) {
-    return this.operations
-      .filter(op => op.canvasId === canvasId)
-      .slice(-limit);
+  async logOperation(canvasId, operation) {
+    try {
+      const logPath = path.join(this.dataDir, `log_${canvasId}.jsonl`);
+      const logEntry = JSON.stringify({ ...operation, timestamp: Date.now() }) + '\n';
+      await fs.appendFile(logPath, logEntry);
+    } catch (error) {
+      console.error('Failed to log operation:', error);
+    }
   }
 }
 
 // 初始化服务
-const sessionManager = new CollaborationSessionManager();
-const dataPersistence = new DataPersistenceService();
-const operationHandler = new OperationEventHandler(sessionManager, dataPersistence);
+const stateManager = new CollaborationStateManager();
+const persistenceService = new PersistenceService();
+const messageHandler = new MessageHandler(stateManager, persistenceService);
 
-// WebSocket服务器
+// WebSocket连接处理
 io.on('connection', (socket) => {
-  console.log('用户连接:', socket.id);
+  console.log('User connected:', socket.id);
 
   // 加入画布房间
-  socket.on('joinCanvas', async (data) => {
-    try {
-      const { canvasId, userInfo } = data;
-      
-      // 离开之前的房间
-      const previousCanvasId = sessionManager.userSessions.get(socket.id);
-      if (previousCanvasId) {
-        socket.leave(previousCanvasId);
-        sessionManager.removeUserFromSession(socket.id);
-        socket.to(previousCanvasId).emit('userLeft', {
-          userId: socket.id,
-          canvasId: previousCanvasId
-        });
-      }
+  socket.on('join-canvas', async (data) => {
+    const { canvasId, userInfo } = data;
+    
+    // 加入Socket.IO房间
+    socket.join(canvasId);
+    
+    // 添加用户到状态管理器
+    stateManager.addUserToCanvas(canvasId, socket.id, userInfo);
+    
+    // 加载并发送当前画布状态
+    const canvasState = await persistenceService.loadCanvasState(canvasId);
+    stateManager.canvasStates.set(canvasId, canvasState);
+    
+    socket.emit('canvas-state', {
+      nodes: Object.fromEntries(canvasState.nodes),
+      connections: Object.fromEntries(canvasState.connections)
+    });
+    
+    // 通知其他用户有新用户加入
+    socket.to(canvasId).emit('user-joined', {
+      userId: socket.id,
+      userInfo: userInfo
+    });
+    
+    // 发送当前在线用户列表
+    const onlineUsers = stateManager.getUsersInCanvas(canvasId);
+    socket.emit('online-users', onlineUsers);
+    
+    console.log(`User ${socket.id} joined canvas ${canvasId}`);
+  });
 
-      // 加入新房间
-      socket.join(canvasId);
-      const session = sessionManager.addUserToSession(socket.id, canvasId, userInfo);
-      
-      // 加载画布状态
-      const canvasState = await dataPersistence.loadCanvasState(canvasId);
-      sessionManager.syncCanvasState(canvasId, canvasState);
-      
-      // 发送当前画布状态给新用户
-      socket.emit('canvasStateSync', {
-        canvasState: session.canvasState,
-        users: sessionManager.getUsersInSession(canvasId)
-      });
-      
-      // 通知其他用户有新用户加入
-      socket.to(canvasId).emit('userJoined', {
-        user: { socketId: socket.id, ...userInfo },
-        canvasId
-      });
-      
-      console.log(`用户 ${socket.id} 加入画布 ${canvasId}`);
-    } catch (error) {
-      console.error('加入画布失败:', error);
-      socket.emit('error', { message: '加入画布失败' });
+  // 节点移动
+  socket.on('node-move', (data) => {
+    const userInfo = stateManager.userSockets.get(socket.id);
+    if (userInfo) {
+      messageHandler.handleNodeMove(userInfo.canvasId, data, socket);
     }
   });
 
-  // 离开画布房间
-  socket.on('leaveCanvas', () => {
-    const canvasId = sessionManager.removeUserFromSession(socket.id);
-    if (canvasId) {
-      socket.leave(canvasId);
-      socket.to(canvasId).emit('userLeft', {
-        userId: socket.id,
-        canvasId
+  // 节点创建
+  socket.on('node-create', (data) => {
+    const userInfo = stateManager.userSockets.get(socket.id);
+    if (userInfo) {
+      const nodeData = messageHandler.handleNodeCreate(userInfo.canvasId, data, socket);
+      socket.emit('node-create-confirm', nodeData);
+    }
+  });
+
+  // 节点删除
+  socket.on('node-delete', (data) => {
+    const userInfo = stateManager.userSockets.get(socket.id);
+    if (userInfo) {
+      messageHandler.handleNodeDelete(userInfo.canvasId, data, socket);
+    }
+  });
+
+  // 创建连接
+  socket.on('connection-create', (data) => {
+    const userInfo = stateManager.userSockets.get(socket.id);
+    if (userInfo) {
+      const connectionData = messageHandler.handleConnection(userInfo.canvasId, data, socket);
+      socket.emit('connection-create-confirm', connectionData);
+    }
+  });
+
+  // 画布更新（批量操作）
+  socket.on('canvas-update', (data) => {
+    const userInfo = stateManager.userSockets.get(socket.id);
+    if (userInfo) {
+      socket.to(userInfo.canvasId).emit('canvas-updated', {
+        ...data,
+        userId: socket.id
       });
-      console.log(`用户 ${socket.id} 离开画布 ${canvasId}`);
-    }
-  });
-
-  // 画布更新事件
-  socket.on('canvasUpdate', async (data) => {
-    try {
-      const canvasId = sessionManager.userSessions.get(socket.id);
-      if (!canvasId) {
-        socket.emit('error', { message: '未加入任何画布' });
-        return;
-      }
-
-      const { type, payload } = data;
-      let operation = null;
-
-      switch (type) {
-        case 'node_create':
-          operation = operationHandler.handleNodeCreate(canvasId, payload, socket.id);
-          break;
-        case 'node_update':
-          operation = operationHandler.handleNodeUpdate(canvasId, payload, socket.id);
-          break;
-        case 'node_delete':
-          operation = operationHandler.handleNodeDelete(canvasId, payload.nodeId, socket.id);
-          break;
-        case 'connection_create':
-          operation = operationHandler.handleConnectionCreate(canvasId, payload, socket.id);
-          break;
-        default:
-          console.log('未知操作类型:', type);
-          return;
-      }
-
-      if (operation) {
-        // 广播给房间内其他用户
-        socket.to(canvasId).emit('canvasUpdate', {
-          type,
-          payload,
-          userId: socket.id,
-          timestamp: operation.timestamp
-        });
-
-        // 异步保存画布状态
-        const session = sessionManager.sessions.get(canvasId);
-        if (session) {
-          dataPersistence.saveCanvasState(canvasId, session.canvasState);
-        }
-      }
-    } catch (error) {
-      console.error('处理画布更新失败:', error);
-      socket.emit('error', { message: '更新失败' });
-    }
-  });
-
-  // 获取操作历史
-  socket.on('getOperationHistory', async (data) => {
-    try {
-      const { canvasId, limit } = data;
-      const history = await dataPersistence.getOperationHistory(canvasId, limit);
-      socket.emit('operationHistory', { canvasId, history });
-    } catch (error) {
-      console.error('获取操作历史失败:', error);
-      socket.emit('error', { message: '获取历史失败' });
     }
   });
 
   // 用户断开连接
-  socket.on('disconnect', () => {
-    const canvasId = sessionManager.removeUserFromSession(socket.id);
-    if (canvasId) {
-      socket.to(canvasId).emit('userLeft', {
-        userId: socket.id,
-        canvasId
+  socket.on('disconnect', async () => {
+    const userInfo = stateManager.removeUserFromCanvas(socket.id);
+    
+    if (userInfo) {
+      // 保存画布状态
+      const canvasState = stateManager.getCanvasState(userInfo.canvasId);
+      await persistenceService.saveCanvasState(userInfo.canvasId, canvasState);
+      
+      // 通知其他用户
+      socket.to(userInfo.canvasId).emit('user-left', {
+        userId: socket.id
       });
+      
+      console.log(`User ${socket.id} left canvas ${userInfo.canvasId}`);
     }
-    console.log('用户断开连接:', socket.id);
+    
+    console.log('User disconnected:', socket.id);
+  });
+
+  // 心跳检测
+  socket.on('ping', () => {
+    socket.emit('pong');
   });
 });
 
-// API路由
-app.get('/api/canvas/:canvasId', async (req, res) => {
-  try {
-    const { canvasId } = req.params;
-    const canvasState = await dataPersistence.loadCanvasState(canvasId);
-    res.json({ success: true, data: canvasState });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+// 定期保存画布状态
+setInterval(async () => {
+  for (let [canvasId, state] of stateManager.canvasStates) {
+    await persistenceService.saveCanvasState(canvasId, state);
   }
-});
-
-app.post('/api/canvas/:canvasId', async (req, res) => {
-  try {
-    const { canvasId } = req.params;
-    const { canvasState } = req.body;
-    await dataPersistence.saveCanvasState(canvasId, canvasState);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-app.get('/api/canvas/:canvasId/users', (req, res) => {
-  try {
-    const { canvasId } = req.params;
-    const users = sessionManager.getUsersInSession(canvasId);
-    res.json({ success: true, data: users });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// 提供静态文件
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+}, 30000); // 每30秒保存一次
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`服务器运行在端口 ${PORT}`);
+  console.log(`WebSocket collaboration server running on port ${PORT}`);
 });
