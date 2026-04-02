@@ -1,4 +1,4 @@
-"""测试: 消息队列系统搭建"""
+"""测试: 开发工具链配置"""
 from pathlib import Path
 
 REPO_DIR = Path(__file__).parent.parent
