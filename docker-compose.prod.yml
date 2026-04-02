@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  app:
+    image: ${DOCKER_REGISTRY}/user-auth-system:${DOCKER_TAG:-latest}
+    container_name: auth-app-prod
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+    env_file:
+      - .env.production
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - app-network
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth-app.rule=Host(`yourapp.com`)"
+      - "traefik.http.routers.auth-app.tls=true"
+      - "traefik.http.routers.auth-app.tls.certresolver=letsencrypt"
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: auth-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    networks:
+      - app-network
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+
+  redis:
+    image: redis:7-alpine
+    container_name: auth-redis-prod
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD} --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: auth-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - app
+    networks:
+      - app-network
+
+  # Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: auth-prometheus-prod
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - app-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: auth-grafana-prod
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  app-network:
+    driver: bridge
