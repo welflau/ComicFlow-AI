@@ -1,70 +1,112 @@
 import pytest
 from pathlib import Path
-import sys
 import os
+import subprocess
+import json
+import yaml
 
-# 添加项目根目录到Python路径
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
-
-def test_main_module_can_be_imported():
-    """测试main.py模块是否可以正常导入"""
-    try:
-        import backend.main
-        assert True
-    except ImportError:
-        # 如果backend包不存在，尝试直接导入main
-        main_file = project_root / "backend" / "main.py"
-        if main_file.exists():
-            spec = __import__('importlib.util').util.spec_from_file_location("main", main_file)
-            main_module = __import__('importlib.util').util.module_from_spec(spec)
-            spec.loader.exec_module(main_module)
-            assert main_module is not None
-        else:
-            pytest.fail("无法找到或导入main.py模块")
-
-def test_backend_main_file_exists():
-    """测试backend目录下的main.py文件是否存在"""
-    main_file = project_root / "backend" / "main.py"
-    assert main_file.exists(), f"main.py文件不存在于路径: {main_file}"
-    assert main_file.is_file(), "main.py应该是一个文件而不是目录"
-
-def test_dev_notes_file_exists_and_contains_queue_content():
-    """测试开发文档是否存在并包含消息队列相关内容"""
-    dev_notes_file = project_root / "docs" / "d2c78b" / "f18c65" / "dev-notes.md"
+class TestDockerDeployment:
     
-    # 检查文件是否存在
-    assert dev_notes_file.exists(), f"开发文档不存在于路径: {dev_notes_file}"
-    assert dev_notes_file.is_file(), "dev-notes.md应该是一个文件"
-    
-    # 检查文件内容是否包含消息队列相关关键词
-    content = dev_notes_file.read_text(encoding='utf-8')
-    queue_keywords = ['消息队列', 'message queue', 'queue', '队列', 'backend']
-    
-    has_relevant_content = any(keyword.lower() in content.lower() for keyword in queue_keywords)
-    assert has_relevant_content, "开发文档应该包含消息队列相关内容"
-
-def test_main_module_has_queue_functionality():
-    """测试main.py模块是否包含消息队列相关功能函数"""
-    main_file = project_root / "backend" / "main.py"
-    
-    if main_file.exists():
-        content = main_file.read_text(encoding='utf-8')
+    def test_dockerfile_exists_and_valid(self):
+        """测试Dockerfile文件是否存在且包含必要的配置指令"""
+        dockerfile_path = Path("Dockerfile")
+        assert dockerfile_path.exists(), "Dockerfile文件不存在"
         
-        # 检查是否包含消息队列相关的函数或类定义
-        queue_patterns = ['def ', 'class ', 'queue', 'message', 'send', 'receive']
-        has_functionality = any(pattern in content.lower() for pattern in queue_patterns)
-        
-        assert has_functionality, "main.py应该包含消息队列相关的功能实现"
-    else:
-        pytest.skip("main.py文件不存在，跳过功能测试")
+        content = dockerfile_path.read_text(encoding='utf-8')
+        assert "FROM" in content, "Dockerfile缺少FROM指令"
+        assert "WORKDIR" in content or "RUN" in content, "Dockerfile缺少基本配置指令"
+        assert len(content.strip()) > 0, "Dockerfile内容为空"
 
-def test_backend_directory_structure():
-    """测试后端目录结构是否正确"""
-    backend_dir = project_root / "backend"
-    docs_dir = project_root / "docs"
-    
-    assert backend_dir.exists(), "backend目录应该存在"
-    assert backend_dir.is_dir(), "backend应该是一个目录"
-    assert docs_dir.exists(), "docs目录应该存在"
-    assert docs_dir.is_dir(), "docs应该是一个目录"
+    def test_docker_compose_configuration(self):
+        """测试docker-compose配置文件是否存在且格式正确"""
+        compose_files = [
+            Path("docker-compose.yml"),
+            Path("docker-compose.yaml"),
+            Path("compose.yml"),
+            Path("compose.yaml")
+        ]
+        
+        compose_file = None
+        for file_path in compose_files:
+            if file_path.exists():
+                compose_file = file_path
+                break
+        
+        assert compose_file is not None, "未找到docker-compose配置文件"
+        
+        content = compose_file.read_text(encoding='utf-8')
+        try:
+            config = yaml.safe_load(content)
+            assert isinstance(config, dict), "docker-compose配置格式无效"
+            assert "services" in config, "docker-compose配置缺少services部分"
+            assert len(config["services"]) > 0, "docker-compose配置中没有定义任何服务"
+        except yaml.YAMLError:
+            pytest.fail("docker-compose配置文件YAML格式错误")
+
+    def test_deployment_scripts_executable(self):
+        """测试部署相关脚本文件是否存在且可执行"""
+        script_patterns = [
+            "deploy.sh",
+            "start.sh", 
+            "build.sh",
+            "run.sh"
+        ]
+        
+        found_scripts = []
+        for pattern in script_patterns:
+            script_path = Path(pattern)
+            if script_path.exists():
+                found_scripts.append(script_path)
+        
+        assert len(found_scripts) > 0, "未找到任何部署脚本文件"
+        
+        for script in found_scripts:
+            content = script.read_text(encoding='utf-8')
+            assert content.startswith('#!/bin/bash') or content.startswith('#!/bin/sh'), f"脚本{script}缺少shebang声明"
+            assert len(content.strip()) > 10, f"脚本{script}内容过短，可能不完整"
+
+    def test_environment_configuration_files(self):
+        """测试环境配置文件是否存在且包含必要配置项"""
+        env_files = [
+            Path(".env"),
+            Path(".env.example"),
+            Path("config.json"),
+            Path("app.config")
+        ]
+        
+        found_configs = [f for f in env_files if f.exists()]
+        assert len(found_configs) > 0, "未找到任何环境配置文件"
+        
+        for config_file in found_configs:
+            content = config_file.read_text(encoding='utf-8')
+            assert len(content.strip()) > 0, f"配置文件{config_file}内容为空"
+            
+            if config_file.suffix == '.json':
+                try:
+                    json.loads(content)
+                except json.JSONDecodeError:
+                    pytest.fail(f"JSON配置文件{config_file}格式错误")
+
+    def test_project_structure_for_containerization(self):
+        """测试项目结构是否适合容器化部署"""
+        current_dir = Path(".")
+        
+        # 检查是否有源代码目录
+        source_dirs = ["src", "app", "web", "server", "client"]
+        has_source = any((current_dir / d).exists() for d in source_dirs)
+        
+        # 检查是否有依赖管理文件
+        dependency_files = [
+            "requirements.txt", "package.json", "Pipfile", 
+            "poetry.lock", "go.mod", "pom.xml", "Cargo.toml"
+        ]
+        has_dependencies = any((current_dir / f).exists() for f in dependency_files)
+        
+        assert has_source or has_dependencies, "项目缺少明确的源代码目录或依赖管理文件"
+        
+        # 检查是否有忽略文件
+        ignore_files = [".dockerignore", ".gitignore"]
+        has_ignore = any((current_dir / f).exists() for f in ignore_files)
+        
+        if not has_ignore:
+            print("警告: 建议添加.dockerignore文件以优化构建过程")
