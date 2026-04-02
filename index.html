@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>节点系统工作流画布 - 实时协作</title>
+    <title>节点系统工作流画布 - 性能优化版</title>
     <script src="https://unpkg.com/three@0.155.0/build/three.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <style>
@@ -72,85 +72,41 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
-        /* 工作流执行控制面板样式 */
-        .execution-controls {
+        .performance-controls {
             display: flex;
             gap: 10px;
             align-items: center;
             margin-left: auto;
-            padding-left: 20px;
-            border-left: 1px solid rgba(0, 0, 0, 0.1);
         }
 
-        .execution-btn {
-            padding: 8px 16px;
-            border: none;
+        .performance-toggle {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
             border-radius: 6px;
+            background: white;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
+            font-size: 12px;
             transition: all 0.3s ease;
-            color: white;
-            min-width: 80px;
         }
 
-        .start-btn {
-            background: linear-gradient(135deg, #4CAF50, #45a049);
-        }
-
-        .pause-btn {
-            background: linear-gradient(135deg, #FF9800, #F57C00);
-        }
-
-        .stop-btn {
-            background: linear-gradient(135deg, #f44336, #d32f2f);
-        }
-
-        .execution-btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .execution-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            color: #333;
-        }
-
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #ccc;
-            animation: pulse 2s infinite;
-        }
-
-        .status-indicator.idle {
-            background: #ccc;
-            animation: none;
-        }
-
-        .status-indicator.running {
+        .performance-toggle.active {
             background: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
         }
 
-        .status-indicator.paused {
-            background: #FF9800;
-            animation: none;
-        }
-
-        .status-indicator.error {
-            background: #f44336;
-            animation: none;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+        .performance-stats {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            z-index: 1000;
+            min-width: 200px;
         }
 
         .canvas-container {
@@ -165,940 +121,783 @@
             display: block;
         }
 
-        /* 日志面板样式 */
-        .log-panel {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            max-height: 300px;
-            transform: translateY(100%);
-            transition: transform 0.3s ease;
-            z-index: 1000;
-        }
-
-        .log-panel.open {
-            transform: translateY(0);
-        }
-
-        .log-header {
-            padding: 10px 20px;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .log-title {
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .log-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .log-filter {
-            padding: 4px 8px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
-            background: transparent;
-            color: white;
-            font-size: 12px;
-        }
-
-        .log-btn {
-            padding: 4px 8px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
-            background: transparent;
-            color: white;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.3s ease;
-        }
-
-        .log-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .log-content {
-            height: 200px;
-            overflow-y: auto;
-            padding: 10px 20px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            line-height: 1.4;
-        }
-
-        .log-entry {
-            margin-bottom: 4px;
-            display: flex;
-            gap: 10px;
-        }
-
-        .log-timestamp {
-            color: #888;
-            min-width: 80px;
-        }
-
-        .log-level {
-            min-width: 50px;
-            font-weight: bold;
-        }
-
-        .log-level.info {
-            color: #2196F3;
-        }
-
-        .log-level.warn {
-            color: #FF9800;
-        }
-
-        .log-level.error {
-            color: #f44336;
-        }
-
-        .log-level.success {
-            color: #4CAF50;
-        }
-
-        .log-message {
-            flex: 1;
-        }
-
-        .log-toggle {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #2196F3, #1976D2);
-            border: none;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-            z-index: 1001;
-        }
-
-        .log-toggle:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-        }
-
-        /* 执行历史面板样式 */
-        .history-panel {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            width: 300px;
-            max-height: 400px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-            z-index: 1000;
-        }
-
-        .history-panel.open {
-            transform: translateX(0);
-        }
-
-        .history-header {
-            padding: 15px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .history-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .history-content {
-            max-height: 300px;
-            overflow-y: auto;
-            padding: 10px;
-        }
-
-        .history-item {
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            background: rgba(0, 0, 0, 0.05);
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .history-item:hover {
-            background: rgba(0, 0, 0, 0.1);
-        }
-
-        .history-item-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 4px;
-        }
-
-        .history-item-time {
-            font-size: 12px;
-            color: #666;
-        }
-
-        .history-item-status {
-            font-size: 12px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: white;
-        }
-
-        .history-item-status.success {
-            background: #4CAF50;
-        }
-
-        .history-item-status.error {
-            background: #f44336;
-        }
-
-        .history-item-status.running {
-            background: #2196F3;
-        }
-
-        .history-item-duration {
-            font-size: 12px;
-            color: #888;
-        }
-
-        .history-toggle {
-            padding: 6px 12px;
-            border: 1px solid rgba(0, 0, 0, 0.2);
-            border-radius: 6px;
-            background: transparent;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.3s ease;
-        }
-
-        .history-toggle:hover {
-            background: rgba(0, 0, 0, 0.1);
-        }
-
-        /* 节点状态指示器样式 */
-        .node-status-overlay {
+        .test-controls {
             position: absolute;
-            top: -5px;
-            right: -5px;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            border: 2px solid white;
-            z-index: 10;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
         }
 
-        .node-status-overlay.waiting {
-            background: #ccc;
-        }
-
-        .node-status-overlay.running {
+        .test-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
             background: #2196F3;
-            animation: pulse 1s infinite;
+            color: white;
+            transition: all 0.3s ease;
         }
 
-        .node-status-overlay.completed {
-            background: #4CAF50;
+        .test-button:hover {
+            background: #1976D2;
         }
 
-        .node-status-overlay.error {
-            background: #f44336;
+        .node-count-input {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 80px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
     <div class="app-container">
         <div class="toolbar">
-            <h1>工作流画布</h1>
-            <button class="node-button input-node-btn" onclick="addNode('input')">输入节点</button>
-            <button class="node-button process-node-btn" onclick="addNode('process')">处理节点</button>
-            <button class="node-button output-node-btn" onclick="addNode('output')">输出节点</button>
+            <h1>高性能节点画布</h1>
+            <button class="node-button input-node-btn" onclick="canvasSystem.addRandomNodes(1, 'input')">添加输入节点</button>
+            <button class="node-button process-node-btn" onclick="canvasSystem.addRandomNodes(1, 'process')">添加处理节点</button>
+            <button class="node-button output-node-btn" onclick="canvasSystem.addRandomNodes(1, 'output')">添加输出节点</button>
             
-            <!-- 工作流执行控制面板 -->
-            <div class="execution-controls">
-                <div class="execution-status">
-                    <div class="status-indicator idle" id="statusIndicator"></div>
-                    <span id="statusText">就绪</span>
-                </div>
-                <button class="execution-btn start-btn" id="startBtn" onclick="workflowExecution.startWorkflow()">开始</button>
-                <button class="execution-btn pause-btn" id="pauseBtn" onclick="workflowExecution.pauseWorkflow()" disabled>暂停</button>
-                <button class="execution-btn stop-btn" id="stopBtn" onclick="workflowExecution.stopWorkflow()" disabled>停止</button>
-                <button class="history-toggle" onclick="executionHistory.togglePanel()">历史</button>
+            <div class="performance-controls">
+                <button class="performance-toggle" id="lodToggle" onclick="toggleLOD()">LOD优化</button>
+                <button class="performance-toggle" id="cullingToggle" onclick="toggleCulling()">视口裁剪</button>
+                <button class="performance-toggle" id="batchingToggle" onclick="toggleBatching()">批量渲染</button>
+                <button class="performance-toggle active" id="monitoringToggle" onclick="toggleMonitoring()">性能监控</button>
             </div>
         </div>
-        
+
+        <div class="performance-stats" id="performanceStats"></div>
+
         <div class="canvas-container">
             <canvas id="canvas"></canvas>
         </div>
-        
-        <!-- 日志面板 -->
-        <div class="log-panel" id="logPanel">
-            <div class="log-header">
-                <div class="log-title">执行日志</div>
-                <div class="log-controls">
-                    <select class="log-filter" id="logFilter" onchange="logViewer.filterLogs(this.value)">
-                        <option value="all">全部</option>
-                        <option value="info">信息</option>
-                        <option value="warn">警告</option>
-                        <option value="error">错误</option>
-                        <option value="success">成功</option>
-                    </select>
-                    <button class="log-btn" onclick="logViewer.clearLogs()">清空</button>
-                    <button class="log-btn" onclick="logViewer.exportLogs()">导出</button>
-                    <button class="log-btn" onclick="logViewer.togglePanel()">关闭</button>
-                </div>
-            </div>
-            <div class="log-content" id="logContent"></div>
-        </div>
-        
-        <!-- 执行历史面板 -->
-        <div class="history-panel" id="historyPanel">
-            <div class="history-header">
-                <div class="history-title">执行历史</div>
-                <button class="history-toggle" onclick="executionHistory.togglePanel()">×</button>
-            </div>
-            <div class="history-content" id="historyContent">
-                <!-- 历史记录将在这里动态生成 -->
-            </div>
+
+        <div class="test-controls">
+            <label>节点数量:</label>
+            <input type="number" class="node-count-input" id="nodeCountInput" value="100" min="1" max="5000">
+            <button class="test-button" onclick="performanceTest()">性能测试</button>
+            <button class="test-button" onclick="clearAllNodes()">清空画布</button>
+            <button class="test-button" onclick="generateReport()">生成报告</button>
         </div>
     </div>
-    
-    <!-- 日志切换按钮 -->
-    <button class="log-toggle" id="logToggle" onclick="logViewer.togglePanel()">📋</button>
 
     <script>
-        // 全局变量
-        let scene, camera, renderer, canvas;
-        let nodes = [];
-        let connections = [];
-        let selectedNode = null;
-        let isConnecting = false;
-        let connectionStart = null;
-        let socket = null;
-        let mouse = new THREE.Vector2();
-        let raycaster = new THREE.Raycaster();
-        
-        // 工作流执行管理器
-        class WorkflowExecutionManager {
+        // 性能管理器
+        class PerformanceManager {
             constructor() {
-                this.status = 'idle'; // idle, running, paused, error
-                this.currentExecution = null;
-                this.executionId = null;
+                this.isMonitoring = true;
+                this.metrics = {
+                    fps: 0,
+                    frameTime: 0,
+                    drawCalls: 0,
+                    nodeCount: 0,
+                    visibleNodes: 0,
+                    memoryUsage: 0
+                };
+                this.frameCount = 0;
+                this.lastTime = performance.now();
+                this.fpsHistory = [];
             }
-            
-            startWorkflow() {
-                if (nodes.length === 0) {
-                    logViewer.appendLog('没有可执行的节点', 'warn');
-                    return;
+
+            startMonitoring() {
+                this.isMonitoring = true;
+                this.updateMetrics();
+            }
+
+            stopMonitoring() {
+                this.isMonitoring = false;
+            }
+
+            updateMetrics() {
+                if (!this.isMonitoring) return;
+
+                const now = performance.now();
+                const deltaTime = now - this.lastTime;
+                
+                this.frameCount++;
+                
+                if (deltaTime >= 1000) {
+                    this.metrics.fps = Math.round((this.frameCount * 1000) / deltaTime);
+                    this.metrics.frameTime = Math.round(deltaTime / this.frameCount * 100) / 100;
+                    
+                    this.fpsHistory.push(this.metrics.fps);
+                    if (this.fpsHistory.length > 60) {
+                        this.fpsHistory.shift();
+                    }
+                    
+                    this.frameCount = 0;
+                    this.lastTime = now;
+                    
+                    // 更新内存使用情况
+                    if (performance.memory) {
+                        this.metrics.memoryUsage = Math.round(performance.memory.usedJSHeapSize / 1024 / 1024);
+                    }
+                    
+                    this.displayMetrics();
                 }
                 
-                this.status = 'running';
-                this.executionId = 'exec_' + Date.now();
-                this.updateUI();
+                requestAnimationFrame(() => this.updateMetrics());
+            }
+
+            getPerformanceMetrics() {
+                return { ...this.metrics };
+            }
+
+            displayMetrics() {
+                const statsElement = document.getElementById('performanceStats');
+                if (!statsElement || !this.isMonitoring) return;
+
+                const avgFps = this.fpsHistory.length > 0 ? 
+                    Math.round(this.fpsHistory.reduce((a, b) => a + b, 0) / this.fpsHistory.length) : 0;
                 
-                logViewer.appendLog('开始执行工作流', 'info');
+                statsElement.innerHTML = `
+                    <div><strong>性能监控</strong></div>
+                    <div>FPS: ${this.metrics.fps} (平均: ${avgFps})</div>
+                    <div>帧时间: ${this.metrics.frameTime}ms</div>
+                    <div>绘制调用: ${this.metrics.drawCalls}</div>
+                    <div>节点总数: ${this.metrics.nodeCount}</div>
+                    <div>可见节点: ${this.metrics.visibleNodes}</div>
+                    <div>内存使用: ${this.metrics.memoryUsage}MB</div>
+                `;
+            }
+
+            optimizeRenderingStrategy() {
+                const fps = this.metrics.fps;
+                if (fps < 30) {
+                    // 启用所有优化
+                    canvasSystem.enableLOD();
+                    canvasSystem.enableCulling();
+                    canvasSystem.enableBatching();
+                } else if (fps < 45) {
+                    // 启用部分优化
+                    canvasSystem.enableLOD();
+                    canvasSystem.enableCulling();
+                }
+            }
+        }
+
+        // 节点对象池管理器
+        class NodePoolManager {
+            constructor() {
+                this.pools = {
+                    input: [],
+                    process: [],
+                    output: []
+                };
+                this.maxPoolSize = 100;
+            }
+
+            getNode(type) {
+                const pool = this.pools[type];
+                if (pool && pool.length > 0) {
+                    return pool.pop();
+                }
+                return this.createNewNode(type);
+            }
+
+            releaseNode(node) {
+                const type = node.userData.type;
+                const pool = this.pools[type];
+                if (pool && pool.length < this.maxPoolSize) {
+                    // 重置节点状态
+                    node.position.set(0, 0, 0);
+                    node.visible = false;
+                    pool.push(node);
+                    return true;
+                }
+                return false;
+            }
+
+            createNewNode(type) {
+                const colors = {
+                    input: 0x4CAF50,
+                    process: 0x2196F3,
+                    output: 0xFF9800
+                };
+
+                const geometry = new THREE.BoxGeometry(2, 1, 0.5);
+                const material = new THREE.MeshBasicMaterial({ color: colors[type] });
+                const node = new THREE.Mesh(geometry, material);
                 
-                // 重置所有节点状态
+                node.userData = {
+                    type: type,
+                    id: Math.random().toString(36).substr(2, 9),
+                    lodLevel: 0,
+                    isVisible: true
+                };
+
+                return node;
+            }
+
+            preloadNodes(count) {
+                const types = ['input', 'process', 'output'];
+                types.forEach(type => {
+                    for (let i = 0; i < count; i++) {
+                        const node = this.createNewNode(type);
+                        this.pools[type].push(node);
+                    }
+                });
+            }
+
+            cleanupPool() {
+                Object.values(this.pools).forEach(pool => {
+                    pool.forEach(node => {
+                        if (node.geometry) node.geometry.dispose();
+                        if (node.material) node.material.dispose();
+                    });
+                    pool.length = 0;
+                });
+            }
+        }
+
+        // 视口裁剪器
+        class ViewportCuller {
+            constructor() {
+                this.frustum = new THREE.Frustum();
+                this.cameraMatrix = new THREE.Matrix4();
+                this.enabled = false;
+            }
+
+            updateViewport(camera) {
+                if (!this.enabled) return;
+                this.cameraMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+                this.frustum.setFromProjectionMatrix(this.cameraMatrix);
+            }
+
+            cullNodes(nodeList) {
+                if (!this.enabled) {
+                    return nodeList.filter(node => node.visible);
+                }
+
+                const visibleNodes = [];
+                nodeList.forEach(node => {
+                    if (this.isNodeVisible(node)) {
+                        node.visible = true;
+                        visibleNodes.push(node);
+                    } else {
+                        node.visible = false;
+                    }
+                });
+                return visibleNodes;
+            }
+
+            isNodeVisible(node) {
+                if (!this.enabled) return true;
+                const boundingBox = this.getBoundingBox(node);
+                return this.frustum.intersectsBox(boundingBox);
+            }
+
+            getBoundingBox(node) {
+                const box = new THREE.Box3();
+                box.setFromObject(node);
+                return box;
+            }
+        }
+
+        // LOD控制器
+        class LODController {
+            constructor() {
+                this.enabled = false;
+                this.lodDistances = [10, 25, 50]; // 不同LOD级别的距离阈值
+            }
+
+            updateLOD(camera, nodes) {
+                if (!this.enabled) return;
+
                 nodes.forEach(node => {
-                    nodeStatusVisualizer.updateNodeStatus(node.id, 'waiting');
+                    const distance = this.calculateDistance(node, camera);
+                    const lodLevel = this.getLODLevel(distance);
+                    this.setLODLevel(node, lodLevel);
+                });
+            }
+
+            calculateDistance(node, camera) {
+                return node.position.distanceTo(camera.position);
+            }
+
+            getLODLevel(distance) {
+                if (distance < this.lodDistances[0]) return 0; // 高细节
+                if (distance < this.lodDistances[1]) return 1; // 中细节
+                if (distance < this.lodDistances[2]) return 2; // 低细节
+                return 3; // 最低细节
+            }
+
+            setLODLevel(node, level) {
+                if (node.userData.lodLevel === level) return;
+                
+                node.userData.lodLevel = level;
+                
+                // 根据LOD级别调整节点复杂度
+                switch (level) {
+                    case 0: // 高细节
+                        node.scale.set(1, 1, 1);
+                        if (node.material) node.material.wireframe = false;
+                        break;
+                    case 1: // 中细节
+                        node.scale.set(0.8, 0.8, 0.8);
+                        if (node.material) node.material.wireframe = false;
+                        break;
+                    case 2: // 低细节
+                        node.scale.set(0.6, 0.6, 0.6);
+                        if (node.material) node.material.wireframe = true;
+                        break;
+                    case 3: // 最低细节
+                        node.scale.set(0.4, 0.4, 0.4);
+                        if (node.material) node.material.wireframe = true;
+                        break;
+                }
+            }
+        }
+
+        // 批量渲染器
+        class BatchRenderer {
+            constructor() {
+                this.batches = {
+                    input: [],
+                    process: [],
+                    output: []
+                };
+                this.enabled = false;
+                this.instancedMeshes = {};
+            }
+
+            addToBatch(node) {
+                if (!this.enabled) return;
+                const type = node.userData.type;
+                if (this.batches[type]) {
+                    this.batches[type].push(node);
+                }
+            }
+
+            renderBatch(nodeType) {
+                if (!this.enabled) return;
+                const batch = this.batches[nodeType];
+                if (!batch || batch.length === 0) return;
+
+                // 创建实例化网格
+                if (!this.instancedMeshes[nodeType]) {
+                    this.createInstancedMesh(nodeType, batch.length);
+                }
+
+                // 更新实例化网格的变换矩阵
+                const instancedMesh = this.instancedMeshes[nodeType];
+                batch.forEach((node, index) => {
+                    if (index < instancedMesh.count) {
+                        const matrix = new THREE.Matrix4();
+                        matrix.compose(node.position, node.quaternion, node.scale);
+                        instancedMesh.setMatrixAt(index, matrix);
+                    }
+                });
+                instancedMesh.instanceMatrix.needsUpdate = true;
+            }
+
+            createInstancedMesh(nodeType, count) {
+                const colors = {
+                    input: 0x4CAF50,
+                    process: 0x2196F3,
+                    output: 0xFF9800
+                };
+
+                const geometry = new THREE.BoxGeometry(2, 1, 0.5);
+                const material = new THREE.MeshBasicMaterial({ color: colors[nodeType] });
+                const instancedMesh = new THREE.InstancedMesh(geometry, material, count);
+                
+                this.instancedMeshes[nodeType] = instancedMesh;
+                canvasSystem.scene.add(instancedMesh);
+            }
+
+            clearBatch() {
+                Object.keys(this.batches).forEach(type => {
+                    this.batches[type] = [];
+                });
+            }
+
+            optimizeBatches() {
+                // 清理未使用的实例化网格
+                Object.keys(this.instancedMeshes).forEach(type => {
+                    const mesh = this.instancedMeshes[type];
+                    const batch = this.batches[type];
+                    if (!batch || batch.length === 0) {
+                        canvasSystem.scene.remove(mesh);
+                        delete this.instancedMeshes[type];
+                    }
+                });
+            }
+        }
+
+        // 性能分析器
+        class PerformanceProfiler {
+            constructor() {
+                this.isProfilering = false;
+                this.profileData = [];
+                this.testResults = [];
+            }
+
+            startProfiling() {
+                this.isProfilering = true;
+                this.profileData = [];
+                console.log('开始性能分析...');
+            }
+
+            stopProfiling() {
+                this.isProfilering = false;
+                console.log('性能分析结束');
+                return this.profileData;
+            }
+
+            recordFrame(metrics) {
+                if (!this.isProfilering) return;
+                
+                this.profileData.push({
+                    timestamp: performance.now(),
+                    ...metrics
+                });
+            }
+
+            async testWithNodeCount(count) {
+                console.log(`开始测试 ${count} 个节点的性能...`);
+                
+                // 清空现有节点
+                canvasSystem.clearNodes();
+                
+                // 添加指定数量的节点
+                const startTime = performance.now();
+                canvasSystem.addRandomNodes(count);
+                const addTime = performance.now() - startTime;
+                
+                // 等待几秒收集性能数据
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+                const metrics = performanceManager.getPerformanceMetrics();
+                const result = {
+                    nodeCount: count,
+                    addTime: addTime,
+                    avgFps: metrics.fps,
+                    frameTime: metrics.frameTime,
+                    memoryUsage: metrics.memoryUsage,
+                    timestamp: new Date().toISOString()
+                };
+                
+                this.testResults.push(result);
+                console.log('测试结果:', result);
+                
+                return result;
+            }
+
+            generateReport() {
+                const report = {
+                    testResults: this.testResults,
+                    summary: this.generateSummary(),
+                    recommendations: this.generateRecommendations()
+                };
+                
+                console.log('性能测试报告:', report);
+                
+                // 下载报告
+                this.downloadReport(report);
+                
+                return report;
+            }
+
+            generateSummary() {
+                if (this.testResults.length === 0) return null;
+                
+                const avgFps = this.testResults.reduce((sum, result) => sum + result.avgFps, 0) / this.testResults.length;
+                const maxNodes = Math.max(...this.testResults.map(r => r.nodeCount));
+                const minFps = Math.min(...this.testResults.map(r => r.avgFps));
+                
+                return {
+                    totalTests: this.testResults.length,
+                    averageFps: Math.round(avgFps),
+                    maxNodesTested: maxNodes,
+                    minFpsRecorded: minFps
+                };
+            }
+
+            generateRecommendations() {
+                const recommendations = [];
+                
+                if (this.testResults.length > 0) {
+                    const lowFpsTests = this.testResults.filter(r => r.avgFps < 30);
+                    if (lowFpsTests.length > 0) {
+                        recommendations.push('建议在节点数量超过' + Math.min(...lowFpsTests.map(r => r.nodeCount)) + '时启用所有性能优化');
+                    }
+                    
+                    const highMemoryTests = this.testResults.filter(r => r.memoryUsage > 100);
+                    if (highMemoryTests.length > 0) {
+                        recommendations.push('内存使用较高，建议启用对象池管理');
+                    }
+                }
+                
+                return recommendations;
+            }
+
+            downloadReport(report) {
+                const dataStr = JSON.stringify(report, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `performance_report_${new Date().toISOString().slice(0, 10)}.json`;
+                link.click();
+                
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        // 主画布系统
+        class CanvasSystem {
+            constructor() {
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true });
+                this.nodes = [];
+                
+                // 初始化性能优化组件
+                this.nodePool = new NodePoolManager();
+                this.viewportCuller = new ViewportCuller();
+                this.lodController = new LODController();
+                this.batchRenderer = new BatchRenderer();
+                
+                this.setupRenderer();
+                this.setupCamera();
+                this.setupControls();
+                this.animate();
+                
+                // 预加载节点池
+                this.nodePool.preloadNodes(50);
+            }
+
+            setupRenderer() {
+                this.renderer.setSize(window.innerWidth, window.innerHeight - 80);
+                this.renderer.setClearColor(0x1a1a2e);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            }
+
+            setupCamera() {
+                this.camera.position.set(0, 0, 20);
+                this.camera.lookAt(0, 0, 0);
+            }
+
+            setupControls() {
+                let isDragging = false;
+                let previousMousePosition = { x: 0, y: 0 };
+                
+                const canvas = this.renderer.domElement;
+                
+                canvas.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    previousMousePosition = { x: e.clientX, y: e.clientY };
                 });
                 
-                // 发送执行请求到后端
-                if (socket) {
-                    socket.emit('start_workflow', {
-                        executionId: this.executionId,
-                        nodes: nodes.map(n => ({id: n.id, type: n.type, position: n.position})),
-                        connections: connections
+                canvas.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    
+                    const deltaX = e.clientX - previousMousePosition.x;
+                    const deltaY = e.clientY - previousMousePosition.y;
+                    
+                    this.camera.position.x -= deltaX * 0.01;
+                    this.camera.position.y += deltaY * 0.01;
+                    
+                    previousMousePosition = { x: e.clientX, y: e.clientY };
+                });
+                
+                canvas.addEventListener('mouseup', () => {
+                    isDragging = false;
+                });
+                
+                canvas.addEventListener('wheel', (e) => {
+                    this.camera.position.z += e.deltaY * 0.01;
+                    this.camera.position.z = Math.max(5, Math.min(100, this.camera.position.z));
+                });
+                
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / (window.innerHeight - 80);
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight - 80);
+                });
+            }
+
+            addRandomNodes(count, type = null) {
+                const types = type ? [type] : ['input', 'process', 'output'];
+                
+                for (let i = 0; i < count; i++) {
+                    const nodeType = types[Math.floor(Math.random() * types.length)];
+                    const node = this.nodePool.getNode(nodeType);
+                    
+                    // 随机位置
+                    node.position.set(
+                        (Math.random() - 0.5) * 40,
+                        (Math.random() - 0.5) * 30,
+                        (Math.random() - 0.5) * 10
+                    );
+                    
+                    node.visible = true;
+                    this.nodes.push(node);
+                    this.scene.add(node);
+                    
+                    // 添加到批量渲染器
+                    this.batchRenderer.addToBatch(node);
+                }
+                
+                console.log(`添加了 ${count} 个节点，总计 ${this.nodes.length} 个节点`);
+            }
+
+            clearNodes() {
+                this.nodes.forEach(node => {
+                    this.scene.remove(node);
+                    this.nodePool.releaseNode(node);
+                });
+                this.nodes = [];
+                this.batchRenderer.clearBatch();
+                console.log('已清空所有节点');
+            }
+
+            enableLOD() {
+                this.lodController.enabled = true;
+                document.getElementById('lodToggle').classList.add('active');
+            }
+
+            disableLOD() {
+                this.lodController.enabled = false;
+                document.getElementById('lodToggle').classList.remove('active');
+            }
+
+            enableCulling() {
+                this.viewportCuller.enabled = true;
+                document.getElementById('cullingToggle').classList.add('active');
+            }
+
+            disableCulling() {
+                this.viewportCuller.enabled = false;
+                document.getElementById('cullingToggle').classList.remove('active');
+            }
+
+            enableBatching() {
+                this.batchRenderer.enabled = true;
+                document.getElementById('batchingToggle').classList.add('active');
+            }
+
+            disableBatching() {
+                this.batchRenderer.enabled = false;
+                document.getElementById('batchingToggle').classList.remove('active');
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                // 更新性能优化组件
+                this.viewportCuller.updateViewport(this.camera);
+                this.lodController.updateLOD(this.camera, this.nodes);
+                
+                // 视口裁剪
+                const visibleNodes = this.viewportCuller.cullNodes(this.nodes);
+                
+                // 批量渲染
+                if (this.batchRenderer.enabled) {
+                    ['input', 'process', 'output'].forEach(type => {
+                        this.batchRenderer.renderBatch(type);
                     });
                 }
                 
-                // 模拟执行过程
-                this.simulateExecution();
-            }
-            
-            pauseWorkflow() {
-                if (this.status !== 'running') return;
+                // 更新性能指标
+                performanceManager.metrics.nodeCount = this.nodes.length;
+                performanceManager.metrics.visibleNodes = visibleNodes.length;
+                performanceManager.metrics.drawCalls = this.renderer.info.render.calls;
                 
-                this.status = 'paused';
-                this.updateUI();
-                logViewer.appendLog('工作流已暂停', 'warn');
+                // 自动优化策略
+                performanceManager.optimizeRenderingStrategy();
                 
-                if (socket) {
-                    socket.emit('pause_workflow', {executionId: this.executionId});
-                }
-            }
-            
-            stopWorkflow() {
-                if (this.status === 'idle') return;
-                
-                this.status = 'idle';
-                this.updateUI();
-                logViewer.appendLog('工作流已停止', 'info');
-                
-                // 重置所有节点状态
-                nodes.forEach(node => {
-                    nodeStatusVisualizer.updateNodeStatus(node.id, 'waiting');
-                });
-                
-                if (socket) {
-                    socket.emit('stop_workflow', {executionId: this.executionId});
-                }
-                
-                // 保存执行记录
-                executionHistory.addExecutionRecord({
-                    id: this.executionId,
-                    startTime: new Date(),
-                    status: 'stopped',
-                    duration: '手动停止'
-                });
-                
-                this.executionId = null;
-            }
-            
-            updateUI() {
-                const statusIndicator = document.getElementById('statusIndicator');
-                const statusText = document.getElementById('statusText');
-                const startBtn = document.getElementById('startBtn');
-                const pauseBtn = document.getElementById('pauseBtn');
-                const stopBtn = document.getElementById('stopBtn');
-                
-                // 更新状态指示器
-                statusIndicator.className = `status-indicator ${this.status}`;
-                
-                // 更新状态文本
-                const statusTexts = {
-                    idle: '就绪',
-                    running: '执行中',
-                    paused: '已暂停',
-                    error: '错误'
-                };
-                statusText.textContent = statusTexts[this.status];
-                
-                // 更新按钮状态
-                startBtn.disabled = this.status === 'running';
-                pauseBtn.disabled = this.status !== 'running';
-                stopBtn.disabled = this.status === 'idle';
-            }
-            
-            simulateExecution() {
-                if (this.status !== 'running') return;
-                
-                let currentNodeIndex = 0;
-                const executeNode = () => {
-                    if (currentNodeIndex >= nodes.length || this.status !== 'running') {
-                        if (this.status === 'running') {
-                            this.completeExecution();
-                        }
-                        return;
-                    }
-                    
-                    const node = nodes[currentNodeIndex];
-                    nodeStatusVisualizer.updateNodeStatus(node.id, 'running');
-                    logViewer.appendLog(`执行节点: ${node.type} (${node.id})`, 'info');
-                    
-                    // 模拟节点执行时间
-                    setTimeout(() => {
-                        if (this.status === 'running') {
-                            nodeStatusVisualizer.updateNodeStatus(node.id, 'completed');
-                            logViewer.appendLog(`节点执行完成: ${node.type} (${node.id})`, 'success');
-                            currentNodeIndex++;
-                            setTimeout(executeNode, 500);
-                        }
-                    }, Math.random() * 2000 + 1000);
-                };
-                
-                executeNode();
-            }
-            
-            completeExecution() {
-                this.status = 'idle';
-                this.updateUI();
-                logViewer.appendLog('工作流执行完成', 'success');
-                
-                // 保存执行记录
-                executionHistory.addExecutionRecord({
-                    id: this.executionId,
-                    startTime: new Date(),
-                    status: 'success',
-                    duration: '2分30秒'
-                });
-                
-                this.executionId = null;
-            }
-            
-            getExecutionStatus() {
-                return {
-                    status: this.status,
-                    executionId: this.executionId,
-                    startTime: this.currentExecution?.startTime
-                };
+                this.renderer.render(this.scene, this.camera);
             }
         }
-        
-        // 节点状态可视化组件
-        class NodeStatusVisualizer {
-            constructor() {
-                this.statusColors = {
-                    waiting: 0xcccccc,
-                    running: 0x2196f3,
-                    completed: 0x4caf50,
-                    error: 0xf44336
-                };
-            }
-            
-            updateNodeStatus(nodeId, status) {
-                const node = nodes.find(n => n.id === nodeId);
-                if (!node) return;
-                
-                node.status = status;
-                
-                // 更新节点颜色
-                if (node.mesh && node.mesh.material) {
-                    const color = this.statusColors[status] || 0xcccccc;
-                    node.mesh.material.color.setHex(color);
-                }
-                
-                // 添加状态指示器动画
-                if (status === 'running') {
-                    this.animateNodeExecution(nodeId);
-                }
-            }
-            
-            renderStatusIndicator(node) {
-                // 在Three.js场景中为节点添加状态指示器
-                if (node.statusIndicator) {
-                    scene.remove(node.statusIndicator);
-                }
-                
-                const geometry = new THREE.RingGeometry(0.8, 1.0, 8);
-                const material = new THREE.MeshBasicMaterial({
-                    color: this.statusColors[node.status || 'waiting'],
-                    transparent: true,
-                    opacity: 0.8
-                });
-                
-                const indicator = new THREE.Mesh(geometry, material);
-                indicator.position.copy(node.position);
-                indicator.position.z += 0.1;
-                
-                scene.add(indicator);
-                node.statusIndicator = indicator;
-            }
-            
-            animateNodeExecution(nodeId) {
-                const node = nodes.find(n => n.id === nodeId);
-                if (!node || !node.mesh) return;
-                
-                // 创建脉冲动画
-                const originalScale = node.mesh.scale.clone();
-                const animate = () => {
-                    if (node.status !== 'running') return;
-                    
-                    const time = Date.now() * 0.005;
-                    const scale = 1 + Math.sin(time) * 0.1;
-                    node.mesh.scale.setScalar(scale);
-                    
-                    requestAnimationFrame(animate);
-                };
-                
-                animate();
-            }
-        }
-        
-        // 实时日志查看器
-        class LogViewer {
-            constructor() {
-                this.logs = [];
-                this.isOpen = false;
-                this.currentFilter = 'all';
-            }
-            
-            appendLog(message, level = 'info') {
-                const timestamp = new Date().toLocaleTimeString();
-                const logEntry = {
-                    timestamp,
-                    level,
-                    message,
-                    id: Date.now() + Math.random()
-                };
-                
-                this.logs.push(logEntry);
-                
-                // 限制日志数量
-                if (this.logs.length > 1000) {
-                    this.logs = this.logs.slice(-1000);
-                }
-                
-                this.renderLogs();
-                
-                // 自动滚动到底部
-                const logContent = document.getElementById('logContent');
-                logContent.scrollTop = logContent.scrollHeight;
-            }
-            
-            clearLogs() {
-                this.logs = [];
-                this.renderLogs();
-            }
-            
-            filterLogs(level) {
-                this.currentFilter = level;
-                this.renderLogs();
-            }
-            
-            renderLogs() {
-                const logContent = document.getElementById('logContent');
-                const filteredLogs = this.currentFilter === 'all' 
-                    ? this.logs 
-                    : this.logs.filter(log => log.level === this.currentFilter);
-                
-                logContent.innerHTML = filteredLogs.map(log => `
-                    <div class="log-entry">
-                        <span class="log-timestamp">${log.timestamp}</span>
-                        <span class="log-level ${log.level}">${log.level.toUpperCase()}</span>
-                        <span class="log-message">${log.message}</span>
-                    </div>
-                `).join('');
-            }
-            
-            exportLogs() {
-                const logText = this.logs.map(log => 
-                    `[${log.timestamp}] ${log.level.toUpperCase()}: ${log.message}`
-                ).join('\n');
-                
-                const blob = new Blob([logText], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `workflow-logs-${new Date().toISOString().slice(0, 10)}.txt`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }
-            
-            togglePanel() {
-                const logPanel = document.getElementById('logPanel');
-                this.isOpen = !this.isOpen;
-                
-                if (this.isOpen) {
-                    logPanel.classList.add('open');
-                } else {
-                    logPanel.classList.remove('open');
-                }
-            }
-        }
-        
-        // WebSocket执行状态同步
-        class WebSocketExecutionSync {
-            constructor() {
-                this.subscribeExecutionEvents();
-            }
-            
-            subscribeExecutionEvents() {
-                if (!socket) return;
-                
-                socket.on('workflow_status_update', (event) => {
-                    this.handleStatusUpdate(event);
-                });
-                
-                socket.on('workflow_log', (event) => {
-                    this.handleLogMessage(event);
-                });
-                
-                socket.on('node_status_update', (event) => {
-                    nodeStatusVisualizer.updateNodeStatus(event.nodeId, event.status);
-                });
-            }
-            
-            handleStatusUpdate(event) {
-                workflowExecution.status = event.status;
-                workflowExecution.updateUI();
-                
-                logViewer.appendLog(`工作流状态更新: ${event.status}`, 'info');
-            }
-            
-            handleLogMessage(event) {
-                logViewer.appendLog(event.message, event.level || 'info');
-            }
-        }
-        
-        // 执行历史管理
-        class ExecutionHistoryManager {
-            constructor() {
-                this.history = this.loadExecutionHistory();
-                this.isOpen = false;
-            }
-            
-            loadExecutionHistory() {
-                const saved = localStorage.getItem('workflow_execution_history');
-                return saved ? JSON.parse(saved) : [];
-            }
-            
-            saveExecutionHistory() {
-                localStorage.setItem('workflow_execution_history', JSON.stringify(this.history));
-            }
-            
-            addExecutionRecord(record) {
-                this.history.unshift(record);
-                
-                // 限制历史记录数量
-                if (this.history.length > 50) {
-                    this.history = this.history.slice(0, 50);
-                }
-                
-                this.saveExecutionHistory();
-                this.renderHistory();
-            }
-            
-            showExecutionDetails(executionId) {
-                const record = this.history.find(r => r.id === executionId);
-                if (!record) return;
-                
-                alert(`执行详情:\n执行ID: ${record.id}\n开始时间: ${record.startTime}\n状态: ${record.status}\n持续时间: ${record.duration}`);
-            }
-            
-            deleteExecutionRecord(executionId) {
-                this.history = this.history.filter(r => r.id !== executionId);
-                this.saveExecutionHistory();
-                this.renderHistory();
-            }
-            
-            renderHistory() {
-                const historyContent = document.getElementById('historyContent');
-                
-                if (this.history.length === 0) {
-                    historyContent.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">暂无执行历史</div>';
-                    return;
-                }
-                
-                historyContent.innerHTML = this.history.map(record => `
-                    <div class="history-item" onclick="executionHistory.showExecutionDetails('${record.id}')">
-                        <div class="history-item-header">
-                            <span class="history-item-time">${new Date(record.startTime).toLocaleString()}</span>
-                            <span class="history-item-status ${record.status}">${record.status}</span>
-                        </div>
-                        <div class="history-item-duration">${record.duration}</div>
-                    </div>
-                `).join('');
-            }
-            
-            togglePanel() {
-                const historyPanel = document.getElementById('historyPanel');
-                this.isOpen = !this.isOpen;
-                
-                if (this.isOpen) {
-                    historyPanel.classList.add('open');
-                    this.renderHistory();
-                } else {
-                    historyPanel.classList.remove('open');
-                }
-            }
-        }
-        
-        // 初始化全局实例
-        const workflowExecution = new WorkflowExecutionManager();
-        const nodeStatusVisualizer = new NodeStatusVisualizer();
-        const logViewer = new LogViewer();
-        const executionHistory = new ExecutionHistoryManager();
-        let webSocketSync;
-        
-        // 初始化Three.js场景
-        function initThreeJS() {
-            canvas = document.getElementById('canvas');
-            
-            // 创建场景
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x1a1a2e);
-            
-            // 创建相机
-            camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-            camera.position.z = 10;
-            
-            // 创建渲染器
-            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            
-            // 添加光源
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
-            scene.add(ambientLight);
-            
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(10, 10, 5);
-            directionalLight.castShadow = true;
-            scene.add(directionalLight);
-            
-            // 监听窗口大小变化
-            window.addEventListener('resize', onWindowResize);
-            
-            // 添加鼠标事件监听
-            canvas.addEventListener('click', onCanvasClick);
-            canvas.addEventListener('mousemove', onCanvasMouseMove);
-            
-            // 开始渲染循环
-            animate();
-        }
-        
-        // 窗口大小变化处理
-        function onWindowResize() {
-            camera.aspect = canvas.clientWidth / canvas.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-        }
-        
-        // 鼠标点击事件
-        function onCanvasClick(event) {
-            const rect = canvas.getBoundingClientRect();
-            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-            
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(scene.children);
-            
-            if (intersects.length > 0) {
-                const clickedObject = intersects[0].object;
-                const node = nodes.find(n => n.mesh === clickedObject);
-                
-                if (node) {
-                    selectNode(node);
-                }
-            } else {
-                selectedNode = null;
-            }
-        }
-        
-        // 鼠标移动事件
-        function onCanvasMouseMove(event) {
-            const rect = canvas.getBoundingClientRect();
-            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        }
-        
-        // 添加节点
-        function addNode(type) {
-            const nodeId = 'node_' + Date.now();
-            const position = new THREE.Vector3(
-                (Math.random() - 0.5) * 10,
-                (Math.random() - 0.5) * 10,
-                0
-            );
-            
-            // 创建节点几何体
-            const geometry = new THREE.BoxGeometry(1.5, 1, 0.3);
-            const colors = {
-                input: 0x4CAF50,
-                process: 0x2196F3,
-                output: 0xFF9800
-            };
-            
-            const material = new THREE.MeshLambertMaterial({ color: colors[type] });
-            const mesh = new THREE.Mesh(geometry, material);
-            mesh.position.copy(position);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            
-            scene.add(mesh);
-            
-            const node = {
-                id: nodeId,
-                type: type,
-                position: position,
-                mesh: mesh,
-                status: 'waiting'
-            };
-            
-            nodes.push(node);
-            
-            // 添加状态指示器
-            nodeStatusVisualizer.renderStatusIndicator(node);
-            
-            logViewer.appendLog(`添加了${type}节点: ${nodeId}`, 'info');
-            
-            // 发送到后端
-            if (socket) {
-                socket.emit('add_node', node);
-            }
-        }
-        
-        // 选择节点
-        function selectNode(node) {
-            selectedNode = node;
-            logViewer.appendLog(`选择节点: ${node.type} (${node.id})`, 'info');
-        }
-        
-        // 渲染循环
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            // 更新节点状态指示器
-            nodes.forEach(node => {
-                if (node.statusIndicator) {
-                    node.statusIndicator.rotation.z += 0.02;
-                }
-            });
-            
-            renderer.render(scene, camera);
-        }
-        
-        // 初始化WebSocket连接
-        function initWebSocket() {
-            try {
-                socket = io();
-                
-                socket.on('connect', () => {
-                    logViewer.appendLog('WebSocket连接已建立', 'success');
-                    webSocketSync = new WebSocketExecutionSync();
-                });
-                
-                socket.on('disconnect', () => {
-                    logViewer.appendLog('WebSocket连接已断开', 'warn');
-                });
-                
-                socket.on('error', (error) => {
-                    logViewer.appendLog(`WebSocket错误: ${error}`, 'error');
-                });
-                
-            } catch (error) {
-                console.log('WebSocket连接失败，使用离线模式');
-                logViewer.appendLog('WebSocket连接失败，使用离线模式', 'warn');
-            }
-        }
-        
-        // 页面加载完成后初始化
+
+        // 全局实例
+        let performanceManager;
+        let performanceProfiler;
+        let canvasSystem;
+
+        // 初始化系统
         window.addEventListener('DOMContentLoaded', () => {
-            initThreeJS();
-            initWebSocket();
+            performanceManager = new PerformanceManager();
+            performanceProfiler = new PerformanceProfiler();
+            canvasSystem = new CanvasSystem();
             
-            // 添加一些示例日志
-            logViewer.appendLog('工作流系统已启动', 'success');
-            logViewer.appendLog('等待用户操作...', 'info');
+            performanceManager.startMonitoring();
+            
+            // 添加一些初始节点
+            canvasSystem.addRandomNodes(50);
         });
+
+        // 控制函数
+        function toggleLOD() {
+            const toggle = document.getElementById('lodToggle');
+            if (toggle.classList.contains('active')) {
+                canvasSystem.disableLOD();
+            } else {
+                canvasSystem.enableLOD();
+            }
+        }
+
+        function toggleCulling() {
+            const toggle = document.getElementById('cullingToggle');
+            if (toggle.classList.contains('active')) {
+                canvasSystem.disableCulling();
+            } else {
+                canvasSystem.enableCulling();
+            }
+        }
+
+        function toggleBatching() {
+            const toggle = document.getElementById('batchingToggle');
+            if (toggle.classList.contains('active')) {
+                canvasSystem.disableBatching();
+            } else {
+                canvasSystem.enableBatching();
+            }
+        }
+
+        function toggleMonitoring() {
+            const toggle = document.getElementById('monitoringToggle');
+            const statsElement = document.getElementById('performanceStats');
+            
+            if (toggle.classList.contains('active')) {
+                performanceManager.stopMonitoring();
+                toggle.classList.remove('active');
+                statsElement.style.display = 'none';
+            } else {
+                performanceManager.startMonitoring();
+                toggle.classList.add('active');
+                statsElement.style.display = 'block';
+            }
+        }
+
+        async function performanceTest() {
+            const nodeCount = parseInt(document.getElementById('nodeCountInput').value);
+            if (nodeCount < 1 || nodeCount > 5000) {
+                alert('节点数量应在1-5000之间');
+                return;
+            }
+            
+            await performanceProfiler.testWithNodeCount(nodeCount);
+        }
+
+        function clearAllNodes() {
+            canvasSystem.clearNodes();
+        }
+
+        function generateReport() {
+            performanceProfiler.generateReport();
+        }
     </script>
 </body>
 </html>
