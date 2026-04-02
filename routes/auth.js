@@ -1,51 +1,89 @@
 const express = require('express');
 const { body } = require('express-validator');
-const AuthController = require('../controllers/authController');
-const { authenticateToken } = require('../middleware/auth');
+const authController = require('../controllers/authController');
+const auth = require('../middleware/auth');
+const validate = require('../middleware/validate');
 
 const router = express.Router();
 
 // 注册验证规则
 const registerValidation = [
   body('username')
-    .trim()
-    .isLength({ min: 3, max: 30 })
-    .withMessage('Username must be between 3 and 30 characters')
+    .isLength({ min: 3, max: 20 })
+    .withMessage('用户名长度必须在3-20个字符之间')
     .matches(/^[a-zA-Z0-9_]+$/)
-    .withMessage('Username can only contain letters, numbers, and underscores'),
-  
+    .withMessage('用户名只能包含字母、数字和下划线'),
   body('email')
     .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email'),
-  
+    .withMessage('请输入有效的邮箱地址')
+    .normalizeEmail(),
   body('password')
     .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long'),
-  
-  body('role')
-    .optional()
-    .isIn(['user', 'admin', 'moderator'])
-    .withMessage('Invalid role')
+    .withMessage('密码至少6个字符')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('密码必须包含至少一个大写字母、一个小写字母和一个数字')
 ];
 
 // 登录验证规则
 const loginValidation = [
   body('email')
     .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email'),
-  
+    .withMessage('请输入有效的邮箱地址')
+    .normalizeEmail(),
   body('password')
     .notEmpty()
-    .withMessage('Password is required')
+    .withMessage('密码不能为空')
 ];
 
-// 路由定义
-router.post('/register', registerValidation, AuthController.register);
-router.post('/login', loginValidation, AuthController.login);
-router.post('/refresh', AuthController.refresh);
-router.post('/logout', AuthController.logout);
-router.post('/logout-all', authenticateToken, AuthController.logoutAll);
+// 修改密码验证规则
+const changePasswordValidation = [
+  body('currentPassword')
+    .notEmpty()
+    .withMessage('当前密码不能为空'),
+  body('newPassword')
+    .isLength({ min: 6 })
+    .withMessage('新密码至少6个字符')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('新密码必须包含至少一个大写字母、一个小写字母和一个数字')
+];
+
+// 注册
+router.post('/register', registerValidation, validate, authController.register);
+
+// 登录
+router.post('/login', loginValidation, validate, authController.login);
+
+// 登出
+router.post('/logout', auth, authController.logout);
+
+// 刷新令牌
+router.post('/refresh', authController.refreshToken);
+
+// 获取当前用户信息
+router.get('/me', auth, authController.getMe);
+
+// 修改密码
+router.put('/change-password', auth, changePasswordValidation, validate, authController.changePassword);
+
+// 忘记密码
+router.post('/forgot-password', [
+  body('email').isEmail().withMessage('请输入有效的邮箱地址').normalizeEmail()
+], validate, authController.forgotPassword);
+
+// 重置密码
+router.post('/reset-password', [
+  body('token').notEmpty().withMessage('重置令牌不能为空'),
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('密码至少6个字符')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('密码必须包含至少一个大写字母、一个小写字母和一个数字')
+], validate, authController.resetPassword);
+
+// 验证邮箱
+router.get('/verify-email/:token', authController.verifyEmail);
+
+// 重新发送验证邮件
+router.post('/resend-verification', auth, authController.resendVerification);
 
 module.exports = router;

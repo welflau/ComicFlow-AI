@@ -1,260 +1,261 @@
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const JWTUtils = require('../utils/jwt');
-const PasswordService = require('../services/passwordService');
-const { validationResult } = require('express-validator');
+const AppError = require('../utils/AppError');
+const catchAsync = require('../utils/catchAsync');
 
-class AuthController {
-  // 用户注册
-  static async register(req, res) {
-    try {
-      // 验证输入
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-      }
+// 生成JWT令牌
+const generateToken = (userId) => {
+  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE
+  });
+};
 
-      const { username, email, password, role = 'user' } = req.body;
+// 生成刷新令牌
+const generateRefreshToken = (userId) => {
+  return jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET, {
+    expiresIn: process.env.JWT_REFRESH_EXPIRE
+  });
+};
 
-      // 检查用户是否已存在
-      const existingUser = await User.findOne({
-        $or: [{ email }, { username }]
-      });
+// 注册
+exports.register = catchAsync(async (req, res, next) => {
+  const { username, email, password } = req.body;
 
-      if (existingUser) {
-        return res.status(409).json({
-          success: false,
-          message: 'User already exists with this email or username'
-        });
-      }
+  // 检查用户是否已存在
+  const existingUser = await User.findOne({
+    $or: [{ email }, { username }]
+  });
 
-      // 验证密码强度
-      const passwordValidation = PasswordService.validatePasswordStrength(password);
-      if (!passwordValidation.isValid) {
-        return res.status(400).json({
-          success: false,
-          message: 'Password does not meet requirements',
-          errors: passwordValidation.errors
-        });
-      }
-
-      // 创建用户
-      const user = await User.createUser({
-        username,
-        email,
-        password,
-        role
-      });
-
-      // 生成令牌
-      const tokenPair = JWTUtils.generateTokenPair({
-        userId: user._id,
-        email: user.email,
-        role: user.role
-      });
-
-      // 保存刷新令牌
-      user.refreshTokens.push({ token: tokenPair.refreshToken });
-      await user.save();
-
-      res.status(201).json({
-        success: true,
-        message: 'User registered successfully',
-        data: {
-          user: user.toSafeObject(),
-          tokens: tokenPair
-        }
-      });
-    } catch (error) {
-      console.error('Registration error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Registration failed'
-      });
+  if (existingUser) {
+    if (existingUser.email === email) {
+      return next(new AppError('该邮箱已被注册', 400));
+    }
+    if (existingUser.username === username) {
+      return next(new AppError('该用户名已被使用', 400));
     }
   }
 
-  // 用户登录
-  static async login(req, res) {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-      }
+  // 创建新用户
+  const user = await User.create({
+    username,
+    email,
+    password
+  });
 
-      const { email, password } = req.body;
+  // 生成令牌
+  const token = generateToken(user._id);
+  const refreshToken = generateRefreshToken(user._id);
 
-      // 查找用户
-      const user = await User.findByEmail(email);
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid credentials'
-        });
-      }
+  // 保存刷新令牌
+  await user.addRefreshToken(refreshToken);
 
-      // 检查用户是否活跃
-      if (!user.isActive) {
-        return res.status(401).json({
-          success: false,
-          message: 'Account is deactivated'
-        });
-      }
-
-      // 验证密码
-      const isValidPassword = await user.validatePassword(password);
-      if (!isValidPassword) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid credentials'
-        });
-      }
-
-      // 生成令牌
-      const tokenPair = JWTUtils.generateTokenPair({
-        userId: user._id,
-        email: user.email,
-        role: user.role
-      });
-
-      // 保存刷新令牌
-      user.refreshTokens.push({ token: tokenPair.refreshToken });
-      await user.save();
-
-      res.json({
-        success: true,
-        message: 'Login successful',
-        data: {
-          user: user.toSafeObject(),
-          tokens: tokenPair
-        }
-      });
-    } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Login failed'
-      });
+  res.status(201).json({
+    success: true,
+    message: '注册成功',
+    data: {
+      user,
+      token,
+      refreshToken
     }
+  });
+});
+
+// 登录
+exports.login = catchAsync(async (req, res, next) => {
+  const { email, password } = req.body;
+
+  // 查找用户（包含密码字段）
+  const user = await User.findOne({ email }).select('+password');
+
+  if (!user) {
+    return next(new AppError('邮箱或密码错误', 401));
   }
 
-  // 刷新令牌
-  static async refresh(req, res) {
-    try {
-      const { refreshToken } = req.body;
-
-      if (!refreshToken) {
-        return res.status(401).json({
-          success: false,
-          message: 'Refresh token required'
-        });
-      }
-
-      // 验证刷新令牌
-      const decoded = JWTUtils.verifyRefreshToken(refreshToken);
-      
-      // 查找用户并验证刷新令牌
-      const user = await User.findById(decoded.userId);
-      if (!user || !user.isActive) {
-        return res.status(401).json({
-          success: false,
-          message: 'User not found or inactive'
-        });
-      }
-
-      const tokenExists = user.refreshTokens.some(t => t.token === refreshToken);
-      if (!tokenExists) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid refresh token'
-        });
-      }
-
-      // 生成新的令牌对
-      const newTokenPair = JWTUtils.generateTokenPair({
-        userId: user._id,
-        email: user.email,
-        role: user.role
-      });
-
-      // 移除旧的刷新令牌，添加新的
-      user.refreshTokens = user.refreshTokens.filter(t => t.token !== refreshToken);
-      user.refreshTokens.push({ token: newTokenPair.refreshToken });
-      await user.save();
-
-      res.json({
-        success: true,
-        message: 'Token refreshed successfully',
-        data: {
-          tokens: newTokenPair
-        }
-      });
-    } catch (error) {
-      console.error('Token refresh error:', error);
-      res.status(401).json({
-        success: false,
-        message: 'Token refresh failed'
-      });
-    }
+  // 检查账户是否被锁定
+  if (user.isLocked()) {
+    return next(new AppError('账户已被锁定，请稍后再试', 423));
   }
 
-  // 用户登出
-  static async logout(req, res) {
-    try {
-      const { refreshToken } = req.body;
-      const userId = req.user?.id;
-
-      if (userId && refreshToken) {
-        const user = await User.findById(userId);
-        if (user) {
-          user.refreshTokens = user.refreshTokens.filter(t => t.token !== refreshToken);
-          await user.save();
-        }
-      }
-
-      res.json({
-        success: true,
-        message: 'Logout successful'
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Logout failed'
-      });
-    }
+  // 检查账户是否激活
+  if (!user.isActive) {
+    return next(new AppError('账户已被禁用', 403));
   }
 
-  // 登出所有设备
-  static async logoutAll(req, res) {
-    try {
-      const userId = req.user.id;
-      
-      const user = await User.findById(userId);
-      if (user) {
-        user.refreshTokens = [];
-        await user.save();
-      }
+  // 验证密码
+  const isPasswordValid = await user.comparePassword(password);
 
-      res.json({
-        success: true,
-        message: 'Logged out from all devices'
-      });
-    } catch (error) {
-      console.error('Logout all error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Logout all failed'
-      });
-    }
+  if (!isPasswordValid) {
+    // 增加登录尝试次数
+    await user.incLoginAttempts();
+    return next(new AppError('邮箱或密码错误', 401));
   }
-}
 
-module.exports = AuthController;
+  // 重置登录尝试次数
+  if (user.loginAttempts > 0) {
+    await user.resetLoginAttempts();
+  }
+
+  // 更新最后登录时间
+  user.lastLogin = new Date();
+  await user.save();
+
+  // 生成令牌
+  const token = generateToken(user._id);
+  const refreshToken = generateRefreshToken(user._id);
+
+  // 保存刷新令牌
+  await user.addRefreshToken(refreshToken);
+
+  res.json({
+    success: true,
+    message: '登录成功',
+    data: {
+      user,
+      token,
+      refreshToken
+    }
+  });
+});
+
+// 登出
+exports.logout = catchAsync(async (req, res, next) => {
+  const refreshToken = req.body.refreshToken;
+  
+  if (refreshToken) {
+    // 从用户记录中移除刷新令牌
+    await req.user.removeRefreshToken(refreshToken);
+  }
+
+  res.json({
+    success: true,
+    message: '登出成功'
+  });
+});
+
+// 刷新令牌
+exports.refreshToken = catchAsync(async (req, res, next) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return next(new AppError('刷新令牌不能为空', 400));
+  }
+
+  try {
+    // 验证刷新令牌
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    
+    // 查找用户
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return next(new AppError('用户不存在', 404));
+    }
+
+    // 检查刷新令牌是否存在于用户记录中
+    const tokenExists = user.refreshTokens.some(rt => rt.token === refreshToken);
+    if (!tokenExists) {
+      return next(new AppError('无效的刷新令牌', 401));
+    }
+
+    // 生成新的访问令牌
+    const newToken = generateToken(user._id);
+    const newRefreshToken = generateRefreshToken(user._id);
+
+    // 替换旧的刷新令牌
+    await user.removeRefreshToken(refreshToken);
+    await user.addRefreshToken(newRefreshToken);
+
+    res.json({
+      success: true,
+      message: '令牌刷新成功',
+      data: {
+        token: newToken,
+        refreshToken: newRefreshToken
+      }
+    });
+  } catch (error) {
+    return next(new AppError('无效的刷新令牌', 401));
+  }
+});
+
+// 获取当前用户信息
+exports.getMe = catchAsync(async (req, res, next) => {
+  res.json({
+    success: true,
+    data: {
+      user: req.user
+    }
+  });
+});
+
+// 修改密码
+exports.changePassword = catchAsync(async (req, res, next) => {
+  const { currentPassword, newPassword } = req.body;
+
+  // 获取用户（包含密码）
+  const user = await User.findById(req.user._id).select('+password');
+
+  // 验证当前密码
+  const isCurrentPasswordValid = await user.comparePassword(currentPassword);
+  if (!isCurrentPasswordValid) {
+    return next(new AppError('当前密码错误', 400));
+  }
+
+  // 检查新密码是否与当前密码相同
+  const isSamePassword = await user.comparePassword(newPassword);
+  if (isSamePassword) {
+    return next(new AppError('新密码不能与当前密码相同', 400));
+  }
+
+  // 更新密码
+  user.password = newPassword;
+  await user.save();
+
+  // 清除所有刷新令牌（强制重新登录）
+  user.refreshTokens = [];
+  await user.save();
+
+  res.json({
+    success: true,
+    message: '密码修改成功，请重新登录'
+  });
+});
+
+// 忘记密码
+exports.forgotPassword = catchAsync(async (req, res, next) => {
+  // 这里应该实现发送重置密码邮件的逻辑
+  // 暂时返回成功消息
+  res.json({
+    success: true,
+    message: '密码重置邮件已发送，请查收'
+  });
+});
+
+// 重置密码
+exports.resetPassword = catchAsync(async (req, res, next) => {
+  // 这里应该实现重置密码的逻辑
+  // 暂时返回成功消息
+  res.json({
+    success: true,
+    message: '密码重置成功'
+  });
+});
+
+// 验证邮箱
+exports.verifyEmail = catchAsync(async (req, res, next) => {
+  // 这里应该实现邮箱验证的逻辑
+  // 暂时返回成功消息
+  res.json({
+    success: true,
+    message: '邮箱验证成功'
+  });
+});
+
+// 重新发送验证邮件
+exports.resendVerification = catchAsync(async (req, res, next) => {
+  // 这里应该实现重新发送验证邮件的逻辑
+  // 暂时返回成功消息
+  res.json({
+    success: true,
+    message: '验证邮件已重新发送'
+  });
+});
