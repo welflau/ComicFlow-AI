@@ -2,372 +2,333 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
-const fs = require('fs').promises;
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
 });
 
 // 静态文件服务
 app.use(express.static(path.join(__dirname)));
 
-// 协作状态管理器
-class CollaborationStateManager {
-  constructor() {
-    this.canvasStates = new Map(); // canvasId -> state
-    this.usersInCanvas = new Map(); // canvasId -> Set of users
-    this.userSockets = new Map(); // socketId -> user info
-  }
+// 存储连接的用户和系统状态
+const connectedUsers = new Map();
+const systemState = {
+    nodes: [],
+    connections: [],
+    workflows: []
+};
 
-  getCanvasState(canvasId) {
-    if (!this.canvasStates.has(canvasId)) {
-      this.canvasStates.set(canvasId, {
-        nodes: new Map(),
-        connections: new Map(),
-        lastUpdated: Date.now()
-      });
-    }
-    return this.canvasStates.get(canvasId);
-  }
+// 测试相关的数据存储
+const testSessions = new Map();
+const performanceMetrics = [];
 
-  updateCanvasState(canvasId, operation) {
-    const state = this.getCanvasState(canvasId);
-    
-    switch (operation.type) {
-      case 'node-create':
-        state.nodes.set(operation.data.id, operation.data);
-        break;
-      case 'node-update':
-        if (state.nodes.has(operation.data.id)) {
-          const existingNode = state.nodes.get(operation.data.id);
-          state.nodes.set(operation.data.id, { ...existingNode, ...operation.data });
-        }
-        break;
-      case 'node-delete':
-        state.nodes.delete(operation.data.id);
-        // 删除相关连接
-        for (let [connId, conn] of state.connections) {
-          if (conn.sourceId === operation.data.id || conn.targetId === operation.data.id) {
-            state.connections.delete(connId);
-          }
-        }
-        break;
-      case 'connection-create':
-        state.connections.set(operation.data.id, operation.data);
-        break;
-      case 'connection-delete':
-        state.connections.delete(operation.data.id);
-        break;
-    }
-    
-    state.lastUpdated = Date.now();
-    return state;
-  }
-
-  getUsersInCanvas(canvasId) {
-    return Array.from(this.usersInCanvas.get(canvasId) || []);
-  }
-
-  addUserToCanvas(canvasId, socketId, userInfo) {
-    if (!this.usersInCanvas.has(canvasId)) {
-      this.usersInCanvas.set(canvasId, new Set());
-    }
-    this.usersInCanvas.get(canvasId).add(socketId);
-    this.userSockets.set(socketId, { ...userInfo, canvasId });
-  }
-
-  removeUserFromCanvas(socketId) {
-    const userInfo = this.userSockets.get(socketId);
-    if (userInfo) {
-      const canvasUsers = this.usersInCanvas.get(userInfo.canvasId);
-      if (canvasUsers) {
-        canvasUsers.delete(socketId);
-      }
-      this.userSockets.delete(socketId);
-    }
-    return userInfo;
-  }
-
-  resolveConflict(operation1, operation2) {
-    // 简单的时间戳冲突解决策略
-    return operation1.timestamp > operation2.timestamp ? operation1 : operation2;
-  }
-}
-
-// 消息处理器
-class MessageHandler {
-  constructor(stateManager, persistenceService) {
-    this.stateManager = stateManager;
-    this.persistenceService = persistenceService;
-  }
-
-  handleNodeMove(canvasId, data, socket) {
-    const operation = {
-      type: 'node-update',
-      data: { id: data.nodeId, x: data.x, y: data.y },
-      timestamp: Date.now(),
-      userId: socket.id
-    };
-    
-    this.stateManager.updateCanvasState(canvasId, operation);
-    socket.to(canvasId).emit('node-moved', {
-      nodeId: data.nodeId,
-      x: data.x,
-      y: data.y,
-      userId: socket.id
-    });
-    
-    this.persistenceService.logOperation(canvasId, operation);
-  }
-
-  handleNodeCreate(canvasId, data, socket) {
-    const nodeData = {
-      id: data.id || `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      type: data.type,
-      x: data.x,
-      y: data.y,
-      title: data.title,
-      createdBy: socket.id,
-      createdAt: Date.now()
-    };
-    
-    const operation = {
-      type: 'node-create',
-      data: nodeData,
-      timestamp: Date.now(),
-      userId: socket.id
-    };
-    
-    this.stateManager.updateCanvasState(canvasId, operation);
-    socket.to(canvasId).emit('node-created', nodeData);
-    
-    this.persistenceService.logOperation(canvasId, operation);
-    return nodeData;
-  }
-
-  handleNodeDelete(canvasId, data, socket) {
-    const operation = {
-      type: 'node-delete',
-      data: { id: data.nodeId },
-      timestamp: Date.now(),
-      userId: socket.id
-    };
-    
-    this.stateManager.updateCanvasState(canvasId, operation);
-    socket.to(canvasId).emit('node-deleted', { nodeId: data.nodeId, userId: socket.id });
-    
-    this.persistenceService.logOperation(canvasId, operation);
-  }
-
-  handleConnection(canvasId, data, socket) {
-    const connectionData = {
-      id: data.id || `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      sourceId: data.sourceId,
-      targetId: data.targetId,
-      createdBy: socket.id,
-      createdAt: Date.now()
-    };
-    
-    const operation = {
-      type: 'connection-create',
-      data: connectionData,
-      timestamp: Date.now(),
-      userId: socket.id
-    };
-    
-    this.stateManager.updateCanvasState(canvasId, operation);
-    socket.to(canvasId).emit('connection-created', connectionData);
-    
-    this.persistenceService.logOperation(canvasId, operation);
-    return connectionData;
-  }
-}
-
-// 持久化服务
-class PersistenceService {
-  constructor() {
-    this.dataDir = path.join(__dirname, 'data');
-    this.ensureDataDir();
-  }
-
-  async ensureDataDir() {
-    try {
-      await fs.mkdir(this.dataDir, { recursive: true });
-    } catch (error) {
-      console.error('Failed to create data directory:', error);
-    }
-  }
-
-  async saveCanvasState(canvasId, state) {
-    try {
-      const filePath = path.join(this.dataDir, `canvas_${canvasId}.json`);
-      const serializedState = {
-        nodes: Object.fromEntries(state.nodes),
-        connections: Object.fromEntries(state.connections),
-        lastUpdated: state.lastUpdated
-      };
-      await fs.writeFile(filePath, JSON.stringify(serializedState, null, 2));
-    } catch (error) {
-      console.error('Failed to save canvas state:', error);
-    }
-  }
-
-  async loadCanvasState(canvasId) {
-    try {
-      const filePath = path.join(this.dataDir, `canvas_${canvasId}.json`);
-      const data = await fs.readFile(filePath, 'utf8');
-      const parsed = JSON.parse(data);
-      return {
-        nodes: new Map(Object.entries(parsed.nodes)),
-        connections: new Map(Object.entries(parsed.connections)),
-        lastUpdated: parsed.lastUpdated
-      };
-    } catch (error) {
-      console.log('No existing canvas state found, creating new one');
-      return {
-        nodes: new Map(),
-        connections: new Map(),
-        lastUpdated: Date.now()
-      };
-    }
-  }
-
-  async logOperation(canvasId, operation) {
-    try {
-      const logPath = path.join(this.dataDir, `log_${canvasId}.jsonl`);
-      const logEntry = JSON.stringify({ ...operation, timestamp: Date.now() }) + '\n';
-      await fs.appendFile(logPath, logEntry);
-    } catch (error) {
-      console.error('Failed to log operation:', error);
-    }
-  }
-}
-
-// 初始化服务
-const stateManager = new CollaborationStateManager();
-const persistenceService = new PersistenceService();
-const messageHandler = new MessageHandler(stateManager, persistenceService);
-
-// WebSocket连接处理
+// Socket.IO 连接处理
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-
-  // 加入画布房间
-  socket.on('join-canvas', async (data) => {
-    const { canvasId, userInfo } = data;
+    console.log('用户连接:', socket.id);
     
-    // 加入Socket.IO房间
-    socket.join(canvasId);
-    
-    // 添加用户到状态管理器
-    stateManager.addUserToCanvas(canvasId, socket.id, userInfo);
-    
-    // 加载并发送当前画布状态
-    const canvasState = await persistenceService.loadCanvasState(canvasId);
-    stateManager.canvasStates.set(canvasId, canvasState);
-    
-    socket.emit('canvas-state', {
-      nodes: Object.fromEntries(canvasState.nodes),
-      connections: Object.fromEntries(canvasState.connections)
+    // 用户加入
+    socket.on('user-join', (userData) => {
+        connectedUsers.set(socket.id, {
+            id: socket.id,
+            name: userData.name || `用户${socket.id.slice(0, 6)}`,
+            joinTime: Date.now()
+        });
+        
+        // 发送当前系统状态
+        socket.emit('system-state', systemState);
+        
+        // 通知其他用户
+        socket.broadcast.emit('user-joined', connectedUsers.get(socket.id));
+        
+        console.log(`用户 ${userData.name} 加入系统`);
     });
     
-    // 通知其他用户有新用户加入
-    socket.to(canvasId).emit('user-joined', {
-      userId: socket.id,
-      userInfo: userInfo
+    // 节点操作同步
+    socket.on('node-created', (nodeData) => {
+        systemState.nodes.push(nodeData);
+        socket.broadcast.emit('node-created', nodeData);
+        console.log('节点创建:', nodeData.id);
     });
     
-    // 发送当前在线用户列表
-    const onlineUsers = stateManager.getUsersInCanvas(canvasId);
-    socket.emit('online-users', onlineUsers);
+    socket.on('node-updated', (nodeData) => {
+        const nodeIndex = systemState.nodes.findIndex(n => n.id === nodeData.id);
+        if (nodeIndex !== -1) {
+            systemState.nodes[nodeIndex] = { ...systemState.nodes[nodeIndex], ...nodeData };
+            socket.broadcast.emit('node-updated', nodeData);
+        }
+    });
     
-    console.log(`User ${socket.id} joined canvas ${canvasId}`);
-  });
-
-  // 节点移动
-  socket.on('node-move', (data) => {
-    const userInfo = stateManager.userSockets.get(socket.id);
-    if (userInfo) {
-      messageHandler.handleNodeMove(userInfo.canvasId, data, socket);
-    }
-  });
-
-  // 节点创建
-  socket.on('node-create', (data) => {
-    const userInfo = stateManager.userSockets.get(socket.id);
-    if (userInfo) {
-      const nodeData = messageHandler.handleNodeCreate(userInfo.canvasId, data, socket);
-      socket.emit('node-create-confirm', nodeData);
-    }
-  });
-
-  // 节点删除
-  socket.on('node-delete', (data) => {
-    const userInfo = stateManager.userSockets.get(socket.id);
-    if (userInfo) {
-      messageHandler.handleNodeDelete(userInfo.canvasId, data, socket);
-    }
-  });
-
-  // 创建连接
-  socket.on('connection-create', (data) => {
-    const userInfo = stateManager.userSockets.get(socket.id);
-    if (userInfo) {
-      const connectionData = messageHandler.handleConnection(userInfo.canvasId, data, socket);
-      socket.emit('connection-create-confirm', connectionData);
-    }
-  });
-
-  // 画布更新（批量操作）
-  socket.on('canvas-update', (data) => {
-    const userInfo = stateManager.userSockets.get(socket.id);
-    if (userInfo) {
-      socket.to(userInfo.canvasId).emit('canvas-updated', {
-        ...data,
-        userId: socket.id
-      });
-    }
-  });
-
-  // 用户断开连接
-  socket.on('disconnect', async () => {
-    const userInfo = stateManager.removeUserFromCanvas(socket.id);
+    socket.on('node-deleted', (nodeId) => {
+        systemState.nodes = systemState.nodes.filter(n => n.id !== nodeId);
+        systemState.connections = systemState.connections.filter(c => c.from !== nodeId && c.to !== nodeId);
+        socket.broadcast.emit('node-deleted', nodeId);
+        console.log('节点删除:', nodeId);
+    });
     
-    if (userInfo) {
-      // 保存画布状态
-      const canvasState = stateManager.getCanvasState(userInfo.canvasId);
-      await persistenceService.saveCanvasState(userInfo.canvasId, canvasState);
-      
-      // 通知其他用户
-      socket.to(userInfo.canvasId).emit('user-left', {
-        userId: socket.id
-      });
-      
-      console.log(`User ${socket.id} left canvas ${userInfo.canvasId}`);
-    }
+    // 连接操作同步
+    socket.on('connection-created', (connectionData) => {
+        systemState.connections.push(connectionData);
+        socket.broadcast.emit('connection-created', connectionData);
+    });
     
-    console.log('User disconnected:', socket.id);
-  });
-
-  // 心跳检测
-  socket.on('ping', () => {
-    socket.emit('pong');
-  });
+    socket.on('connection-deleted', (connectionId) => {
+        systemState.connections = systemState.connections.filter(c => c.id !== connectionId);
+        socket.broadcast.emit('connection-deleted', connectionId);
+    });
+    
+    // 工作流操作同步
+    socket.on('workflow-created', (workflowData) => {
+        systemState.workflows.push(workflowData);
+        socket.broadcast.emit('workflow-created', workflowData);
+    });
+    
+    socket.on('workflow-executed', (executionData) => {
+        socket.broadcast.emit('workflow-executed', executionData);
+        console.log('工作流执行:', executionData.workflowId);
+    });
+    
+    // 测试相关事件处理
+    socket.on('test-session-start', (sessionData) => {
+        const sessionId = `test-${Date.now()}-${socket.id}`;
+        testSessions.set(sessionId, {
+            id: sessionId,
+            userId: socket.id,
+            startTime: Date.now(),
+            tests: [],
+            status: 'running'
+        });
+        
+        socket.emit('test-session-created', { sessionId });
+        console.log('测试会话开始:', sessionId);
+    });
+    
+    socket.on('test-result', (testData) => {
+        const session = Array.from(testSessions.values()).find(s => s.userId === socket.id && s.status === 'running');
+        if (session) {
+            session.tests.push({
+                ...testData,
+                timestamp: Date.now()
+            });
+        }
+        
+        // 广播测试结果给其他用户（用于协作测试）
+        socket.broadcast.emit('test-result-broadcast', {
+            userId: socket.id,
+            ...testData
+        });
+    });
+    
+    socket.on('test-session-end', (sessionData) => {
+        const session = Array.from(testSessions.values()).find(s => s.userId === socket.id && s.status === 'running');
+        if (session) {
+            session.status = 'completed';
+            session.endTime = Date.now();
+            session.duration = session.endTime - session.startTime;
+            
+            // 生成测试报告
+            const report = generateTestReport(session);
+            socket.emit('test-report', report);
+            
+            console.log(`测试会话完成: ${session.id}, 耗时: ${session.duration}ms`);
+        }
+    });
+    
+    // 性能指标收集
+    socket.on('performance-metrics', (metrics) => {
+        const metricsData = {
+            userId: socket.id,
+            timestamp: Date.now(),
+            ...metrics
+        };
+        
+        performanceMetrics.push(metricsData);
+        
+        // 保持最近1000条记录
+        if (performanceMetrics.length > 1000) {
+            performanceMetrics.shift();
+        }
+        
+        // 广播性能指标给其他用户
+        socket.broadcast.emit('performance-metrics-broadcast', metricsData);
+    });
+    
+    // 协作冲突解决
+    socket.on('conflict-resolution', (conflictData) => {
+        const resolution = resolveConflict(conflictData);
+        
+        // 通知所有用户冲突解决结果
+        io.emit('conflict-resolved', {
+            conflictId: conflictData.id,
+            resolution: resolution,
+            timestamp: Date.now()
+        });
+        
+        console.log('冲突解决:', conflictData.id, resolution);
+    });
+    
+    // Ping/Pong 用于延迟测试
+    socket.on('ping', (timestamp) => {
+        socket.emit('pong', timestamp);
+    });
+    
+    // 用户断开连接
+    socket.on('disconnect', () => {
+        const user = connectedUsers.get(socket.id);
+        if (user) {
+            connectedUsers.delete(socket.id);
+            socket.broadcast.emit('user-left', user);
+            console.log(`用户 ${user.name} 离开系统`);
+        }
+        
+        // 清理用户的测试会话
+        for (const [sessionId, session] of testSessions.entries()) {
+            if (session.userId === socket.id && session.status === 'running') {
+                session.status = 'interrupted';
+                session.endTime = Date.now();
+                testSessions.delete(sessionId);
+            }
+        }
+    });
 });
 
-// 定期保存画布状态
-setInterval(async () => {
-  for (let [canvasId, state] of stateManager.canvasStates) {
-    await persistenceService.saveCanvasState(canvasId, state);
-  }
-}, 30000); // 每30秒保存一次
+// 测试报告生成函数
+function generateTestReport(session) {
+    const tests = session.tests;
+    const summary = {
+        total: tests.length,
+        passed: tests.filter(t => t.result === true).length,
+        failed: tests.filter(t => t.result === false).length,
+        duration: session.duration
+    };
+    
+    summary.passRate = summary.total > 0 ? (summary.passed / summary.total * 100).toFixed(2) : 0;
+    
+    const categories = {};
+    tests.forEach(test => {
+        if (!categories[test.category]) {
+            categories[test.category] = { passed: 0, failed: 0, total: 0 };
+        }
+        categories[test.category].total++;
+        if (test.result) {
+            categories[test.category].passed++;
+        } else {
+            categories[test.category].failed++;
+        }
+    });
+    
+    return {
+        sessionId: session.id,
+        timestamp: new Date().toISOString(),
+        summary,
+        categories,
+        tests,
+        performanceMetrics: getRecentPerformanceMetrics(session.userId, session.startTime, session.endTime)
+    };
+}
 
+// 获取指定时间范围内的性能指标
+function getRecentPerformanceMetrics(userId, startTime, endTime) {
+    return performanceMetrics.filter(metric => 
+        metric.userId === userId && 
+        metric.timestamp >= startTime && 
+        metric.timestamp <= endTime
+    );
+}
+
+// 冲突解决函数
+function resolveConflict(conflictData) {
+    // 简单的冲突解决策略：
+    // 1. 时间戳优先（最新的更改获胜）
+    // 2. 用户优先级（如果设置了的话）
+    // 3. 操作类型优先级
+    
+    const { type, changes } = conflictData;
+    
+    if (changes.length <= 1) {
+        return changes[0] || null;
+    }
+    
+    // 按时间戳排序，选择最新的
+    const sortedChanges = changes.sort((a, b) => b.timestamp - a.timestamp);
+    
+    return {
+        selectedChange: sortedChanges[0],
+        reason: 'latest_timestamp',
+        rejectedChanges: sortedChanges.slice(1)
+    };
+}
+
+// API 端点
+app.get('/api/system-status', (req, res) => {
+    res.json({
+        connectedUsers: connectedUsers.size,
+        totalNodes: systemState.nodes.length,
+        totalConnections: systemState.connections.length,
+        totalWorkflows: systemState.workflows.length,
+        activeSessions: Array.from(testSessions.values()).filter(s => s.status === 'running').length,
+        uptime: process.uptime()
+    });
+});
+
+app.get('/api/performance-metrics', (req, res) => {
+    const recentMetrics = performanceMetrics.slice(-100); // 最近100条记录
+    res.json(recentMetrics);
+});
+
+app.get('/api/test-sessions', (req, res) => {
+    const sessions = Array.from(testSessions.values()).map(session => ({
+        id: session.id,
+        userId: session.userId,
+        status: session.status,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        duration: session.duration,
+        testCount: session.tests.length
+    }));
+    res.json(sessions);
+});
+
+app.get('/api/test-report/:sessionId', (req, res) => {
+    const session = testSessions.get(req.params.sessionId);
+    if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+    }
+    
+    const report = generateTestReport(session);
+    res.json(report);
+});
+
+// 错误处理
+app.use((err, req, res, next) => {
+    console.error('服务器错误:', err);
+    res.status(500).json({ error: 'Internal server error' });
+});
+
+// 启动服务器
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`WebSocket collaboration server running on port ${PORT}`);
+    console.log(`服务器运行在端口 ${PORT}`);
+    console.log(`访问 http://localhost:${PORT} 查看应用`);
+});
+
+// 优雅关闭
+process.on('SIGTERM', () => {
+    console.log('收到 SIGTERM 信号，正在关闭服务器...');
+    server.close(() => {
+        console.log('服务器已关闭');
+        process.exit(0);
+    });
+});
+
+process.on('SIGINT', () => {
+    console.log('收到 SIGINT 信号，正在关闭服务器...');
+    server.close(() => {
+        console.log('服务器已关闭');
+        process.exit(0);
+    });
 });
