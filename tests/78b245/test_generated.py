@@ -1,130 +1,140 @@
 import pytest
 from pathlib import Path
-from bs4 import BeautifulSoup
+import json
+import re
+import sys
 import os
 
-class TestFrontendModule:
+# 添加项目根目录到Python路径
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+class TestWebSocketCollaborationBackend:
     
-    def test_index_html_file_exists(self):
-        """测试 index.html 文件是否存在"""
-        project_root = Path(__file__).parent
-        index_file = project_root / "frontend" / "index.html"
-        assert index_file.exists(), f"index.html 文件不存在: {index_file}"
-        assert index_file.is_file(), f"index.html 不是一个有效的文件: {index_file}"
-    
-    def test_index_html_contains_essential_elements(self):
-        """测试 index.html 文件包含连线系统的关键HTML元素"""
-        project_root = Path(__file__).parent
-        index_file = project_root / "frontend" / "index.html"
+    def test_server_js_file_exists_and_contains_websocket_logic(self):
+        """测试server.js文件是否存在并包含WebSocket相关逻辑"""
+        server_file = project_root / "server.js"
+        assert server_file.exists(), "server.js文件不存在"
         
-        # 如果文件不存在，先创建一个基本的HTML文件用于测试
-        if not index_file.exists():
-            index_file.parent.mkdir(parents=True, exist_ok=True)
-            basic_html = """
-            <!DOCTYPE html>
-            <html>
-            <head><title>连线系统</title></head>
-            <body>
-                <div id="connection-container"></div>
-                <canvas id="line-canvas"></canvas>
-                <button class="connect-btn">连接</button>
-            </body>
-            </html>
-            """
-            index_file.write_text(basic_html, encoding='utf-8')
+        content = server_file.read_text(encoding='utf-8')
         
-        content = index_file.read_text(encoding='utf-8')
-        soup = BeautifulSoup(content, 'html.parser')
+        # 检查是否包含WebSocket相关关键词
+        websocket_keywords = ['websocket', 'ws', 'socket', 'connection', 'message']
+        found_keywords = [keyword for keyword in websocket_keywords 
+                         if keyword.lower() in content.lower()]
+        assert len(found_keywords) >= 2, f"server.js应包含WebSocket相关关键词，找到: {found_keywords}"
+        
+        # 检查是否包含端口监听逻辑
+        port_patterns = [r'listen\s*\(\s*\d+', r'port\s*[:=]\s*\d+', r'PORT']
+        has_port_config = any(re.search(pattern, content, re.IGNORECASE) 
+                             for pattern in port_patterns)
+        assert has_port_config, "server.js应包含端口配置"
+
+    def test_package_json_contains_required_dependencies(self):
+        """测试package.json文件是否存在并包含必要的依赖项"""
+        package_file = project_root / "package.json"
+        assert package_file.exists(), "package.json文件不存在"
+        
+        with open(package_file, 'r', encoding='utf-8') as f:
+            package_data = json.load(f)
+        
+        # 检查基本字段
+        assert 'name' in package_data, "package.json应包含name字段"
+        assert 'version' in package_data, "package.json应包含version字段"
+        
+        # 检查依赖项
+        dependencies = package_data.get('dependencies', {})
+        dev_dependencies = package_data.get('devDependencies', {})
+        all_deps = {**dependencies, **dev_dependencies}
+        
+        # WebSocket相关依赖
+        websocket_deps = ['ws', 'socket.io', 'websocket', 'express']
+        found_deps = [dep for dep in websocket_deps if dep in all_deps]
+        assert len(found_deps) >= 1, f"package.json应包含WebSocket相关依赖，找到: {found_deps}"
+
+    def test_index_html_contains_collaboration_elements(self):
+        """测试index.html文件是否存在并包含协作相关的HTML元素"""
+        html_file = project_root / "index.html"
+        assert html_file.exists(), "index.html文件不存在"
+        
+        content = html_file.read_text(encoding='utf-8')
         
         # 检查基本HTML结构
-        assert soup.find('html') is not None, "缺少 <html> 标签"
-        assert soup.find('head') is not None, "缺少 <head> 标签"
-        assert soup.find('body') is not None, "缺少 <body> 标签"
+        assert '<html' in content.lower(), "应包含html标签"
+        assert '<head' in content.lower(), "应包含head标签"
+        assert '<body' in content.lower(), "应包含body标签"
         
-        # 检查连线系统相关元素
-        connection_elements = soup.find_all(['div', 'canvas', 'svg'], id=lambda x: x and 'connect' in x.lower() or 'line' in x.lower() if x else False)
-        assert len(connection_elements) > 0, "缺少连线相关的容器元素（如带有connect或line的id）"
-    
+        # 检查协作相关元素
+        collaboration_keywords = ['websocket', 'socket', 'collaboration', 'real-time', 'realtime', 'connect']
+        found_keywords = [keyword for keyword in collaboration_keywords 
+                         if keyword.lower() in content.lower()]
+        assert len(found_keywords) >= 1, f"HTML应包含协作相关关键词，找到: {found_keywords}"
+        
+        # 检查JavaScript引用或内联脚本
+        has_script = '<script' in content.lower()
+        assert has_script, "HTML应包含JavaScript脚本标签"
+
     def test_dev_notes_documentation_exists(self):
-        """测试开发文档是否存在并包含有效内容"""
-        project_root = Path(__file__).parent
-        dev_notes_file = project_root / "docs" / "78b245" / "7d7081" / "dev-notes.md"
+        """测试开发文档是否存在并包含有用信息"""
+        docs_file = project_root / "docs" / "78b245" / "f0e90c" / "dev-notes.md"
+        assert docs_file.exists(), "开发文档dev-notes.md不存在"
         
-        # 如果文件不存在，创建基本的开发文档
-        if not dev_notes_file.exists():
-            dev_notes_file.parent.mkdir(parents=True, exist_ok=True)
-            basic_notes = """
-# 连线系统开发笔记
+        content = docs_file.read_text(encoding='utf-8')
+        assert len(content.strip()) > 0, "开发文档不应为空"
+        
+        # 检查是否包含开发相关信息
+        dev_keywords = ['websocket', 'server', 'client', 'api', 'setup', 'install', 'run', 'start']
+        found_keywords = [keyword for keyword in dev_keywords 
+                         if keyword.lower() in content.lower()]
+        assert len(found_keywords) >= 2, f"开发文档应包含开发相关信息，找到: {found_keywords}"
 
-## 功能概述
-- 前端连线交互
-- 拖拽连接功能
-- 实时连线渲染
-
-## 技术栈
-- HTML5 Canvas
-- JavaScript ES6+
-- CSS3
-
-## 开发进度
-- [x] 基础HTML结构
-- [ ] 连线逻辑实现
-- [ ] 样式优化
-            """
-            dev_notes_file.write_text(basic_notes, encoding='utf-8')
+    def test_project_structure_completeness(self):
+        """测试项目结构的完整性"""
+        required_files = [
+            "server.js",
+            "package.json", 
+            "index.html",
+            "docs/78b245/f0e90c/dev-notes.md"
+        ]
         
-        assert dev_notes_file.exists(), f"开发文档不存在: {dev_notes_file}"
+        missing_files = []
+        for file_path in required_files:
+            full_path = project_root / file_path
+            if not full_path.exists():
+                missing_files.append(file_path)
         
-        content = dev_notes_file.read_text(encoding='utf-8')
-        assert len(content.strip()) > 0, "开发文档内容为空"
+        assert len(missing_files) == 0, f"缺少必要文件: {missing_files}"
         
-        # 检查文档是否包含连线系统相关的关键词
-        keywords = ['连线', 'connect', '系统', 'frontend', '前端']
-        content_lower = content.lower()
-        found_keywords = [keyword for keyword in keywords if keyword.lower() in content_lower]
-        assert len(found_keywords) >= 2, f"开发文档应包含至少2个相关关键词，当前找到: {found_keywords}"
-    
-    def test_frontend_directory_structure(self):
-        """测试前端目录结构的完整性"""
-        project_root = Path(__file__).parent
-        frontend_dir = project_root / "frontend"
-        
-        # 确保frontend目录存在
-        frontend_dir.mkdir(parents=True, exist_ok=True)
-        
-        assert frontend_dir.exists(), "frontend 目录不存在"
-        assert frontend_dir.is_dir(), "frontend 不是一个目录"
-        
-        # 检查是否有HTML文件
-        html_files = list(frontend_dir.glob("*.html"))
-        assert len(html_files) > 0, "frontend 目录中没有找到HTML文件"
-        
-        # 检查index.html是否在其中
-        index_exists = any(f.name == "index.html" for f in html_files)
-        assert index_exists, "frontend 目录中缺少 index.html 文件"
-    
-    def test_project_documentation_structure(self):
-        """测试项目文档目录结构的合理性"""
-        project_root = Path(__file__).parent
+        # 检查docs目录结构
         docs_dir = project_root / "docs"
+        assert docs_dir.exists() and docs_dir.is_dir(), "docs目录应存在"
+
+    def test_server_file_syntax_validity(self):
+        """测试server.js文件的基本语法有效性"""
+        server_file = project_root / "server.js"
+        assert server_file.exists(), "server.js文件不存在"
         
-        # 确保docs目录存在
-        docs_dir.mkdir(parents=True, exist_ok=True)
+        content = server_file.read_text(encoding='utf-8')
         
-        assert docs_dir.exists(), "docs 文档目录不存在"
-        assert docs_dir.is_dir(), "docs 不是一个目录"
+        # 检查基本JavaScript语法元素
+        js_patterns = [
+            r'require\s*\(',  # CommonJS require
+            r'import\s+.*from',  # ES6 import
+            r'function\s+\w+',  # 函数定义
+            r'const\s+\w+',  # const声明
+            r'let\s+\w+',  # let声明
+            r'var\s+\w+'  # var声明
+        ]
         
-        # 检查嵌套目录结构
-        nested_dir = docs_dir / "78b245" / "7d7081"
-        nested_dir.mkdir(parents=True, exist_ok=True)
+        found_patterns = [pattern for pattern in js_patterns 
+                         if re.search(pattern, content)]
+        assert len(found_patterns) >= 1, "server.js应包含有效的JavaScript语法结构"
         
-        assert nested_dir.exists(), "文档嵌套目录结构不完整"
+        # 检查括号匹配（简单检查）
+        open_braces = content.count('{')
+        close_braces = content.count('}')
+        open_parens = content.count('(')
+        close_parens = content.count(')')
         
-        # 检查是否有markdown文件
-        md_files = list(nested_dir.glob("*.md"))
-        if len(md_files) == 0:
-            # 创建基本的markdown文件
-            (nested_dir / "dev-notes.md").write_text("# 开发笔记\n连线系统前端开发", encoding='utf-8')
-            md_files = list(nested_dir.glob("*.md"))
-        
-        assert len(md_files) > 0, "文档目录中没有找到markdown文件"
+        assert abs(open_braces - close_braces) <= 2, "大括号应基本匹配"
+        assert abs(open_parens - close_parens) <= 2, "小括号应基本匹配"
