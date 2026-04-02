@@ -1,60 +1,53 @@
 # 架构设计 - 前端工作流执行界面
 
 ## 架构模式
-基于现有HTML页面的模块化扩展
+基于现有HTML页面的增量扩展架构
 
 ## 技术栈
 
 - **language**: JavaScript
-- **framework**: 原生JavaScript + Three.js
+- **framework**: 原生JS + Three.js + WebSocket
 
 ## 模块设计
 
-### WorkflowExecutionPanel
-职责: 工作流执行控制面板，提供启动、暂停、停止、重置等操作
-- startWorkflow(workflowId)
+### 工作流执行控制面板
+职责: 在现有index.html中添加工作流执行控制区域，包括开始/暂停/停止按钮、执行进度显示
+- startWorkflow()
 - pauseWorkflow()
 - stopWorkflow()
-- resetWorkflow()
 - getExecutionStatus()
 
-### ExecutionStatusDisplay
-职责: 实时显示工作流执行状态，包括节点状态、进度条、执行时间等
+### 节点状态可视化组件
+职责: 扩展现有Three.js画布，为节点添加执行状态指示器（等待/执行中/完成/错误）
 - updateNodeStatus(nodeId, status)
-- updateProgress(percentage)
-- updateExecutionTime(duration)
-- showExecutionSummary()
+- renderStatusIndicator(node)
+- animateNodeExecution(nodeId)
 
-### ExecutionLogViewer
-职责: 显示工作流执行日志，支持过滤、搜索、导出功能
-- appendLog(logEntry)
-- filterLogs(level, nodeId)
-- searchLogs(keyword)
-- exportLogs(format)
+### 实时日志查看器
+职责: 在页面底部添加可折叠的日志面板，实时显示工作流执行日志
+- appendLog(message, level)
 - clearLogs()
+- filterLogs(level)
+- exportLogs()
 
-### WorkflowExecutionAPI
-职责: 与后端工作流引擎通信，处理执行请求和状态同步
-- executeWorkflow(workflowData)
-- subscribeToExecutionEvents()
-- getExecutionHistory(workflowId)
-- cancelExecution(executionId)
+### WebSocket执行状态同步
+职责: 扩展现有WebSocket连接，监听工作流执行状态变化并更新UI
+- subscribeExecutionEvents()
+- handleStatusUpdate(event)
+- handleLogMessage(event)
 
-### ExecutionVisualization
-职责: 在Three.js画布上可视化显示执行状态，节点高亮、数据流动画等
-- highlightExecutingNode(nodeId)
-- showDataFlow(fromNode, toNode, data)
-- updateNodeVisualState(nodeId, state)
-- playExecutionAnimation()
+### 执行历史管理
+职责: 在现有用户界面中添加执行历史查看功能，支持查看历史执行记录
+- loadExecutionHistory()
+- showExecutionDetails(executionId)
+- deleteExecutionRecord(executionId)
 
 ## 数据流
-用户在执行控制面板触发工作流执行 -> WorkflowExecutionAPI发送执行请求到后端 -> 通过WebSocket接收执行状态更新 -> ExecutionStatusDisplay更新界面状态 -> ExecutionLogViewer显示执行日志 -> ExecutionVisualization在画布上可视化执行过程 -> 所有状态变化实时同步到协作用户
+用户在现有画布界面点击执行按钮 -> 控制面板发送执行请求到后端工作流引擎 -> WebSocket接收执行状态更新 -> 更新Three.js画布中的节点状态视觉效果 -> 日志查看器实时显示执行日志 -> 执行完成后更新历史记录
 
 ## 关键决策
-- 在现有index.html基础上添加工作流执行界面，不重新设计页面结构
-- 复用现有的WebSocket连接进行执行状态实时同步
-- 执行控制面板采用浮动面板设计，不影响画布操作
-- 日志查看器支持分级显示（错误、警告、信息、调试）
-- 执行状态通过Three.js画布节点颜色和动画直观展示
-- 支持执行历史记录查看和重放功能
-- 采用事件驱动架构，各模块通过自定义事件通信
+- 在现有index.html基础上扩展，保持原有认证系统和样式风格
+- 复用现有Three.js画布架构，通过状态叠加方式显示执行状态
+- 利用现有WebSocket连接，扩展消息类型支持执行状态同步
+- 采用CSS Grid布局在现有容器中添加执行控制和日志区域
+- 使用原生JavaScript实现，保持与现有代码技术栈一致
