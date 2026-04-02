@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>用户认证系统</title>
-    <script src="https://unpkg.com/vue@3.3.8/dist/vue.global.js"></script>
+    <title>节点系统工作流画布</title>
+    <script src="https://unpkg.com/three@0.155.0/build/three.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -16,705 +16,1448 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            overflow: hidden;
         }
 
         .app-container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
-        .auth-container {
+        .toolbar {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            max-width: 400px;
-            margin: 0 auto;
+            padding: 15px 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
         }
 
-        .dashboard-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            padding: 30px;
-            min-height: 500px;
+        .toolbar h1 {
+            color: #333;
+            font-size: 20px;
+            margin-right: 30px;
         }
 
-        .auth-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .node-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
             color: white;
-            padding: 30px;
-            text-align: center;
         }
 
-        .auth-header h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
+        .input-node-btn {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
         }
 
-        .auth-header p {
-            opacity: 0.9;
+        .process-node-btn {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+        }
+
+        .output-node-btn {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+        }
+
+        .node-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .canvas {
+            width: 100%;
+            height: 100%;
+            background: #f5f5f5;
+            position: relative;
+            cursor: grab;
+        }
+
+        .canvas:active {
+            cursor: grabbing;
+        }
+
+        .node {
+            position: absolute;
+            min-width: 150px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            cursor: move;
+            user-select: none;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .node:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .node.selected {
+            border-color: #2196F3;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
+        }
+
+        .node-header {
+            padding: 12px 16px;
+            border-radius: 10px 10px 0 0;
+            color: white;
+            font-weight: 600;
             font-size: 14px;
         }
 
-        .auth-form {
-            padding: 30px;
+        .input-node .node-header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
         }
 
-        .form-group {
-            margin-bottom: 20px;
+        .process-node .node-header {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
         }
 
-        .form-group label {
+        .output-node .node-header {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+        }
+
+        .node-content {
+            padding: 16px;
+        }
+
+        .node-input, .node-output {
+            margin: 8px 0;
+        }
+
+        .node-input label, .node-output label {
             display: block;
-            margin-bottom: 8px;
-            color: #333;
+            margin-bottom: 4px;
+            font-size: 12px;
+            color: #666;
             font-weight: 500;
         }
 
-        .form-group input {
+        .node-input input, .node-input select {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e1e5e9;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 15px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-        }
-
-        .btn-danger {
-            background: #dc3545;
-        }
-
-        .switch-form {
-            text-align: center;
-            color: #666;
-        }
-
-        .switch-form a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .switch-form a:hover {
-            text-decoration: underline;
-        }
-
-        .alert {
-            padding: 12px 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
             font-size: 14px;
+            transition: border-color 0.3s ease;
         }
 
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+        .node-input input:focus, .node-input select:focus {
+            outline: none;
+            border-color: #2196F3;
         }
 
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+        .connection-point {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            position: absolute;
+            cursor: crosshair;
+            transition: all 0.3s ease;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
-        .user-info {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+        .input-point {
+            left: -6px;
+            background: #4CAF50;
         }
 
-        .user-info h3 {
-            color: #333;
-            margin-bottom: 10px;
+        .output-point {
+            right: -6px;
+            background: #FF9800;
         }
 
-        .user-info p {
-            color: #666;
-            margin-bottom: 5px;
+        .connection-point:hover {
+            transform: scale(1.3);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
 
-        .token-info {
-            background: #e9ecef;
-            padding: 15px;
+        .connection-line {
+            position: absolute;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .temp-connection {
+            stroke: #2196F3;
+            stroke-width: 3;
+            fill: none;
+            stroke-dasharray: 5,5;
+            animation: dash 1s linear infinite;
+        }
+
+        .established-connection {
+            stroke: #4CAF50;
+            stroke-width: 3;
+            fill: none;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -10;
+            }
+        }
+
+        /* 协作相关样式 */
+        .collaboration-panel {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 250px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 16px;
+            z-index: 1001;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding: 8px 12px;
             border-radius: 8px;
-            margin-top: 20px;
-            font-family: monospace;
-            font-size: 12px;
-            word-break: break-all;
+            font-size: 14px;
+            font-weight: 500;
         }
 
-        .loading {
-            display: inline-block;
+        .connection-status.connected {
+            background: rgba(76, 175, 80, 0.1);
+            color: #4CAF50;
+        }
+
+        .connection-status.disconnected {
+            background: rgba(244, 67, 54, 0.1);
+            color: #f44336;
+        }
+
+        .connection-status.connecting {
+            background: rgba(255, 152, 0, 0.1);
+            color: #FF9800;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .online-users {
+            margin-bottom: 16px;
+        }
+
+        .online-users h3 {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+
+        .user-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 10px;
+        }
+
+        .user-cursor {
+            position: absolute;
             width: 20px;
             height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+            pointer-events: none;
+            z-index: 1002;
+            transition: all 0.1s ease;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .cursor-pointer {
+            width: 0;
+            height: 0;
+            border-left: 10px solid;
+            border-right: 10px solid transparent;
+            border-bottom: 15px solid transparent;
         }
 
-        .role-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            background: #667eea;
+        .cursor-label {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            background: rgba(0, 0, 0, 0.8);
             color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        .conflict-dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
             border-radius: 12px;
-            font-size: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            padding: 24px;
+            z-index: 1003;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .conflict-dialog h3 {
+            color: #f44336;
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+
+        .conflict-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .conflict-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
             font-weight: 500;
+            transition: all 0.3s ease;
         }
 
-        .role-badge.admin {
-            background: #dc3545;
+        .conflict-btn.accept {
+            background: #4CAF50;
+            color: white;
         }
 
-        .role-badge.user {
-            background: #28a745;
+        .conflict-btn.reject {
+            background: #f44336;
+            color: white;
+        }
+
+        .conflict-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .node-selection {
+            border: 2px dashed;
+            border-radius: 12px;
+            position: absolute;
+            pointer-events: none;
+            opacity: 0.6;
         }
     </style>
 </head>
 <body>
-    <div id="app">
-        <div class="app-container">
-            <!-- 未登录状态 - 显示登录/注册表单 -->
-            <div v-if="!isAuthenticated" class="auth-container">
-                <div class="auth-header">
-                    <h1>{{ isLoginMode ? '用户登录' : '用户注册' }}</h1>
-                    <p>{{ isLoginMode ? '欢迎回来，请登录您的账户' : '创建新账户开始使用' }}</p>
-                </div>
-                
-                <div class="auth-form">
-                    <div v-if="message" :class="['alert', messageType === 'success' ? 'alert-success' : 'alert-error']">
-                        {{ message }}
-                    </div>
-                    
-                    <form @submit.prevent="isLoginMode ? login() : register()">
-                        <div v-if="!isLoginMode" class="form-group">
-                            <label for="username">用户名</label>
-                            <input 
-                                type="text" 
-                                id="username" 
-                                v-model="form.username" 
-                                required
-                                :disabled="loading"
-                            >
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="email">邮箱</label>
-                            <input 
-                                type="email" 
-                                id="email" 
-                                v-model="form.email" 
-                                required
-                                :disabled="loading"
-                            >
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="password">密码</label>
-                            <input 
-                                type="password" 
-                                id="password" 
-                                v-model="form.password" 
-                                required
-                                :disabled="loading"
-                                minlength="6"
-                            >
-                        </div>
-                        
-                        <div v-if="!isLoginMode" class="form-group">
-                            <label for="confirmPassword">确认密码</label>
-                            <input 
-                                type="password" 
-                                id="confirmPassword" 
-                                v-model="form.confirmPassword" 
-                                required
-                                :disabled="loading"
-                                minlength="6"
-                            >
-                        </div>
-                        
-                        <button type="submit" class="btn" :disabled="loading">
-                            <span v-if="loading" class="loading"></span>
-                            {{ loading ? '处理中...' : (isLoginMode ? '登录' : '注册') }}
-                        </button>
-                    </form>
-                    
-                    <div class="switch-form">
-                        <span v-if="isLoginMode">还没有账户？</span>
-                        <span v-else>已有账户？</span>
-                        <a href="#" @click.prevent="toggleMode">
-                            {{ isLoginMode ? '立即注册' : '立即登录' }}
-                        </a>
-                    </div>
-                </div>
+    <div class="app-container">
+        <div class="toolbar">
+            <h1>节点系统工作流画布</h1>
+            <button class="node-button input-node-btn" onclick="createNode('input')">输入节点</button>
+            <button class="node-button process-node-btn" onclick="createNode('process')">处理节点</button>
+            <button class="node-button output-node-btn" onclick="createNode('output')">输出节点</button>
+        </div>
+        
+        <div class="canvas-container">
+            <div class="canvas" id="canvas">
+                <svg id="connections" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;"></svg>
+            </div>
+        </div>
+
+        <!-- 协作面板 -->
+        <div class="collaboration-panel">
+            <div class="connection-status disconnected" id="connectionStatus">
+                <div class="status-indicator"></div>
+                <span>未连接</span>
             </div>
             
-            <!-- 已登录状态 - 显示用户仪表板 -->
-            <div v-else class="dashboard-container">
-                <div class="user-info">
-                    <h3>欢迎，{{ currentUser.username }}！</h3>
-                    <p><strong>邮箱:</strong> {{ currentUser.email }}</p>
-                    <p><strong>角色:</strong> <span :class="['role-badge', currentUser.role]">{{ currentUser.role }}</span></p>
-                    <p><strong>注册时间:</strong> {{ formatDate(currentUser.createdAt) }}</p>
-                    <p><strong>最后登录:</strong> {{ formatDate(currentUser.lastLogin) }}</p>
-                </div>
-                
-                <div v-if="message" :class="['alert', messageType === 'success' ? 'alert-success' : 'alert-error']">
-                    {{ message }}
-                </div>
-                
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <button class="btn btn-secondary" @click="refreshToken" :disabled="loading">
-                        <span v-if="loading" class="loading"></span>
-                        {{ loading ? '刷新中...' : '刷新令牌' }}
-                    </button>
-                    
-                    <button class="btn btn-danger" @click="logout">
-                        退出登录
-                    </button>
-                </div>
-                
-                <div class="token-info">
-                    <h4>当前访问令牌信息:</h4>
-                    <p><strong>令牌:</strong> {{ accessToken.substring(0, 50) }}...</p>
-                    <p><strong>过期时间:</strong> {{ tokenExpiry }}</p>
-                    <p><strong>刷新令牌:</strong> {{ refreshTokenValue ? '有效' : '无效' }}</p>
-                </div>
+            <div class="online-users">
+                <h3>在线用户</h3>
+                <div id="usersList"></div>
             </div>
         </div>
     </div>
 
     <script>
-        const { createApp, ref, computed, onMounted } = Vue;
+        // WebSocket管理器
+        class WebSocketManager {
+            constructor() {
+                this.ws = null;
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+                this.reconnectDelay = 1000;
+                this.messageCallbacks = [];
+                this.connectionCallbacks = [];
+                this.isConnecting = false;
+            }
 
-        // JWT工具类
-        class JWTUtils {
-            static generateAccessToken(payload) {
-                // 模拟JWT生成（实际应用中应在服务器端生成）
-                const header = { alg: 'HS256', typ: 'JWT' };
-                const now = Math.floor(Date.now() / 1000);
-                const tokenPayload = {
-                    ...payload,
-                    iat: now,
-                    exp: now + 3600 // 1小时过期
+            connect(url = 'ws://localhost:8080') {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    return Promise.resolve();
+                }
+
+                this.isConnecting = true;
+                this.updateConnectionStatus('connecting');
+
+                return new Promise((resolve, reject) => {
+                    try {
+                        this.ws = new WebSocket(url);
+                        
+                        this.ws.onopen = () => {
+                            console.log('WebSocket连接已建立');
+                            this.isConnecting = false;
+                            this.reconnectAttempts = 0;
+                            this.updateConnectionStatus('connected');
+                            this.notifyConnectionChange(true);
+                            resolve();
+                        };
+
+                        this.ws.onmessage = (event) => {
+                            try {
+                                const message = JSON.parse(event.data);
+                                this.notifyMessage(message);
+                            } catch (error) {
+                                console.error('解析消息失败:', error);
+                            }
+                        };
+
+                        this.ws.onclose = () => {
+                            console.log('WebSocket连接已关闭');
+                            this.isConnecting = false;
+                            this.updateConnectionStatus('disconnected');
+                            this.notifyConnectionChange(false);
+                            this.attemptReconnect();
+                        };
+
+                        this.ws.onerror = (error) => {
+                            console.error('WebSocket错误:', error);
+                            this.isConnecting = false;
+                            this.updateConnectionStatus('disconnected');
+                            reject(error);
+                        };
+                    } catch (error) {
+                        this.isConnecting = false;
+                        this.updateConnectionStatus('disconnected');
+                        reject(error);
+                    }
+                });
+            }
+
+            disconnect() {
+                if (this.ws) {
+                    this.ws.close();
+                    this.ws = null;
+                }
+            }
+
+            send(message) {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify(message));
+                    return true;
+                }
+                return false;
+            }
+
+            onMessage(callback) {
+                this.messageCallbacks.push(callback);
+            }
+
+            onConnectionChange(callback) {
+                this.connectionCallbacks.push(callback);
+            }
+
+            notifyMessage(message) {
+                this.messageCallbacks.forEach(callback => {
+                    try {
+                        callback(message);
+                    } catch (error) {
+                        console.error('消息回调错误:', error);
+                    }
+                });
+            }
+
+            notifyConnectionChange(connected) {
+                this.connectionCallbacks.forEach(callback => {
+                    try {
+                        callback(connected);
+                    } catch (error) {
+                        console.error('连接状态回调错误:', error);
+                    }
+                });
+            }
+
+            attemptReconnect() {
+                if (this.reconnectAttempts < this.maxReconnectAttempts && !this.isConnecting) {
+                    this.reconnectAttempts++;
+                    console.log(`尝试重连 (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+                    
+                    setTimeout(() => {
+                        this.connect().catch(error => {
+                            console.error('重连失败:', error);
+                        });
+                    }, this.reconnectDelay * this.reconnectAttempts);
+                }
+            }
+
+            updateConnectionStatus(status) {
+                const statusElement = document.getElementById('connectionStatus');
+                statusElement.className = `connection-status ${status}`;
+                
+                const statusText = {
+                    'connected': '已连接',
+                    'disconnected': '未连接',
+                    'connecting': '连接中...'
                 };
                 
-                const encodedHeader = btoa(JSON.stringify(header));
-                const encodedPayload = btoa(JSON.stringify(tokenPayload));
-                const signature = btoa(`signature_${Date.now()}`);
-                
-                return `${encodedHeader}.${encodedPayload}.${signature}`;
+                statusElement.querySelector('span').textContent = statusText[status];
             }
-            
-            static generateRefreshToken(payload) {
-                const header = { alg: 'HS256', typ: 'JWT' };
-                const now = Math.floor(Date.now() / 1000);
-                const tokenPayload = {
-                    ...payload,
-                    iat: now,
-                    exp: now + 604800 // 7天过期
+        }
+
+        // 协作引擎
+        class CollaborationEngine {
+            constructor(wsManager) {
+                this.wsManager = wsManager;
+                this.userId = this.generateUserId();
+                this.sessionId = null;
+                this.conflictResolver = new ConflictResolver();
+                
+                this.wsManager.onMessage(this.handleMessage.bind(this));
+            }
+
+            generateUserId() {
+                return 'user_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            handleMessage(message) {
+                switch (message.type) {
+                    case 'node_update':
+                        this.handleNodeUpdate(message.data);
+                        break;
+                    case 'connection_update':
+                        this.handleConnectionUpdate(message.data);
+                        break;
+                    case 'user_presence':
+                        presenceManager.updateUserPresence(message.userId, message.data);
+                        break;
+                    case 'conflict':
+                        this.handleConflict(message.data);
+                        break;
+                    case 'session_info':
+                        this.sessionId = message.sessionId;
+                        break;
+                }
+            }
+
+            handleNodeUpdate(nodeData) {
+                if (nodeData.userId === this.userId) return;
+                
+                const existingNode = document.getElementById(nodeData.id);
+                if (existingNode) {
+                    // 检查冲突
+                    const conflict = this.conflictResolver.checkConflict(nodeData, existingNode);
+                    if (conflict) {
+                        this.showConflictDialog(conflict);
+                        return;
+                    }
+                }
+                
+                // 应用远程更改
+                this.applyNodeUpdate(nodeData);
+                changeTracker.applyRemoteChange({
+                    type: 'node_update',
+                    data: nodeData,
+                    userId: nodeData.userId
+                });
+            }
+
+            handleConnectionUpdate(connectionData) {
+                if (connectionData.userId === this.userId) return;
+                
+                this.applyConnectionUpdate(connectionData);
+                changeTracker.applyRemoteChange({
+                    type: 'connection_update',
+                    data: connectionData,
+                    userId: connectionData.userId
+                });
+            }
+
+            handleConflict(conflictData) {
+                collaborationUI.showConflictDialog(conflictData);
+            }
+
+            broadcastChange(changeData) {
+                const message = {
+                    type: changeData.type,
+                    data: {
+                        ...changeData.data,
+                        userId: this.userId,
+                        timestamp: Date.now()
+                    },
+                    userId: this.userId,
+                    sessionId: this.sessionId
                 };
                 
-                const encodedHeader = btoa(JSON.stringify(header));
-                const encodedPayload = btoa(JSON.stringify(tokenPayload));
-                const signature = btoa(`refresh_signature_${Date.now()}`);
-                
-                return `${encodedHeader}.${encodedPayload}.${signature}`;
+                this.wsManager.send(message);
             }
-            
-            static verifyToken(token) {
-                try {
-                    const parts = token.split('.');
-                    if (parts.length !== 3) return null;
-                    
-                    const payload = JSON.parse(atob(parts[1]));
-                    const now = Math.floor(Date.now() / 1000);
-                    
-                    if (payload.exp < now) {
-                        return null; // 令牌已过期
+
+            applyNodeUpdate(nodeData) {
+                let node = document.getElementById(nodeData.id);
+                
+                if (!node && nodeData.action === 'create') {
+                    node = this.createNodeElement(nodeData);
+                    document.getElementById('canvas').appendChild(node);
+                } else if (node) {
+                    if (nodeData.action === 'delete') {
+                        node.remove();
+                        return;
                     }
                     
-                    return payload;
-                } catch (error) {
-                    return null;
-                }
-            }
-            
-            static decodeToken(token) {
-                try {
-                    const parts = token.split('.');
-                    if (parts.length !== 3) return null;
+                    // 更新节点位置和属性
+                    if (nodeData.position) {
+                        node.style.left = nodeData.position.x + 'px';
+                        node.style.top = nodeData.position.y + 'px';
+                    }
                     
-                    return JSON.parse(atob(parts[1]));
-                } catch (error) {
-                    return null;
+                    if (nodeData.properties) {
+                        this.updateNodeProperties(node, nodeData.properties);
+                    }
                 }
             }
-        }
 
-        // 密码加密服务（简化版）
-        class PasswordService {
-            static async hashPassword(password) {
-                // 简化的哈希实现（实际应用中应使用bcrypt等安全库）
-                const encoder = new TextEncoder();
-                const data = encoder.encode(password + 'salt_secret');
-                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-                const hashArray = Array.from(new Uint8Array(hashBuffer));
-                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            }
-            
-            static async comparePassword(password, hash) {
-                const hashedInput = await this.hashPassword(password);
-                return hashedInput === hash;
-            }
-        }
-
-        // 用户模型
-        class UserModel {
-            static users = JSON.parse(localStorage.getItem('users') || '[]');
-            
-            static async create(userData) {
-                const existingUser = this.findByEmail(userData.email);
-                if (existingUser) {
-                    throw new Error('邮箱已被注册');
+            applyConnectionUpdate(connectionData) {
+                if (connectionData.action === 'create') {
+                    this.createConnection(connectionData.from, connectionData.to);
+                } else if (connectionData.action === 'delete') {
+                    this.removeConnection(connectionData.id);
                 }
+            }
+
+            createNodeElement(nodeData) {
+                const node = document.createElement('div');
+                node.className = `node ${nodeData.type}-node`;
+                node.id = nodeData.id;
+                node.style.left = nodeData.position.x + 'px';
+                node.style.top = nodeData.position.y + 'px';
                 
-                const hashedPassword = await PasswordService.hashPassword(userData.password);
-                const user = {
-                    id: Date.now().toString(),
-                    username: userData.username,
-                    email: userData.email,
-                    password: hashedPassword,
-                    role: 'user',
-                    createdAt: new Date().toISOString(),
-                    lastLogin: null
+                const typeNames = {
+                    'input': '输入节点',
+                    'process': '处理节点',
+                    'output': '输出节点'
                 };
                 
-                this.users.push(user);
-                this.saveUsers();
+                node.innerHTML = `
+                    <div class="node-header">${typeNames[nodeData.type]}</div>
+                    <div class="node-content">
+                        <div class="node-input">
+                            <label>节点名称</label>
+                            <input type="text" value="${nodeData.name || ''}" onchange="updateNodeProperty('${nodeData.id}', 'name', this.value)">
+                        </div>
+                    </div>
+                    <div class="connection-point input-point" style="top: 50%;"></div>
+                    <div class="connection-point output-point" style="top: 50%;"></div>
+                `;
                 
-                // 返回用户信息（不包含密码）
-                const { password, ...userInfo } = user;
-                return userInfo;
+                this.makeNodeDraggable(node);
+                return node;
             }
-            
-            static findByEmail(email) {
-                return this.users.find(user => user.email === email);
+
+            updateNodeProperties(node, properties) {
+                Object.keys(properties).forEach(key => {
+                    const input = node.querySelector(`input[data-property="${key}"]`);
+                    if (input) {
+                        input.value = properties[key];
+                    }
+                });
             }
-            
-            static findById(id) {
-                return this.users.find(user => user.id === id);
-            }
-            
-            static async validatePassword(email, password) {
-                const user = this.findByEmail(email);
-                if (!user) return null;
+
+            makeNodeDraggable(node) {
+                let isDragging = false;
+                let startX, startY, initialX, initialY;
                 
-                const isValid = await PasswordService.comparePassword(password, user.password);
-                if (isValid) {
-                    // 更新最后登录时间
-                    user.lastLogin = new Date().toISOString();
-                    this.saveUsers();
+                node.addEventListener('mousedown', (e) => {
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
                     
-                    const { password: _, ...userInfo } = user;
-                    return userInfo;
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    initialX = parseInt(node.style.left) || 0;
+                    initialY = parseInt(node.style.top) || 0;
+                    
+                    node.style.zIndex = 1000;
+                    e.preventDefault();
+                });
+                
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    
+                    const deltaX = e.clientX - startX;
+                    const deltaY = e.clientY - startY;
+                    
+                    const newX = initialX + deltaX;
+                    const newY = initialY + deltaY;
+                    
+                    node.style.left = newX + 'px';
+                    node.style.top = newY + 'px';
+                    
+                    // 广播位置更新
+                    this.broadcastChange({
+                        type: 'node_update',
+                        data: {
+                            id: node.id,
+                            action: 'move',
+                            position: { x: newX, y: newY }
+                        }
+                    });
+                });
+                
+                document.addEventListener('mouseup', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        node.style.zIndex = '';
+                    }
+                });
+            }
+
+            createConnection(fromNodeId, toNodeId) {
+                // 创建连接线的逻辑
+                const svg = document.getElementById('connections');
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                line.setAttribute('class', 'established-connection');
+                line.setAttribute('data-from', fromNodeId);
+                line.setAttribute('data-to', toNodeId);
+                
+                // 计算连接路径
+                this.updateConnectionPath(line, fromNodeId, toNodeId);
+                svg.appendChild(line);
+            }
+
+            removeConnection(connectionId) {
+                const connection = document.querySelector(`[data-connection-id="${connectionId}"]`);
+                if (connection) {
+                    connection.remove();
                 }
+            }
+
+            updateConnectionPath(line, fromNodeId, toNodeId) {
+                const fromNode = document.getElementById(fromNodeId);
+                const toNode = document.getElementById(toNodeId);
+                
+                if (!fromNode || !toNode) return;
+                
+                const fromRect = fromNode.getBoundingClientRect();
+                const toRect = toNode.getBoundingClientRect();
+                const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+                
+                const startX = fromRect.right - canvasRect.left;
+                const startY = fromRect.top + fromRect.height / 2 - canvasRect.top;
+                const endX = toRect.left - canvasRect.left;
+                const endY = toRect.top + toRect.height / 2 - canvasRect.top;
+                
+                const controlX1 = startX + (endX - startX) / 3;
+                const controlY1 = startY;
+                const controlX2 = startX + 2 * (endX - startX) / 3;
+                const controlY2 = endY;
+                
+                const path = `M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`;
+                line.setAttribute('d', path);
+            }
+
+            resolveConflict(conflictData, resolution) {
+                const message = {
+                    type: 'conflict_resolution',
+                    data: {
+                        conflictId: conflictData.id,
+                        resolution: resolution,
+                        userId: this.userId
+                    }
+                };
+                
+                this.wsManager.send(message);
+            }
+        }
+
+        // 在线状态管理器
+        class PresenceManager {
+            constructor() {
+                this.users = new Map();
+                this.cursors = new Map();
+                this.colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+                this.colorIndex = 0;
+            }
+
+            updateUserPresence(userId, presenceData) {
+                if (!this.users.has(userId)) {
+                    this.users.set(userId, {
+                        id: userId,
+                        name: presenceData.name || `用户${userId.slice(-4)}`,
+                        color: this.colors[this.colorIndex % this.colors.length],
+                        lastSeen: Date.now()
+                    });
+                    this.colorIndex++;
+                }
+                
+                const user = this.users.get(userId);
+                user.lastSeen = Date.now();
+                
+                if (presenceData.cursor) {
+                    this.showUserCursor(userId, presenceData.cursor);
+                }
+                
+                if (presenceData.selection) {
+                    this.highlightUserSelection(userId, presenceData.selection);
+                }
+                
+                this.updateOnlineUsersList();
+            }
+
+            showUserCursor(userId, position) {
+                let cursor = this.cursors.get(userId);
+                
+                if (!cursor) {
+                    cursor = document.createElement('div');
+                    cursor.className = 'user-cursor';
+                    cursor.innerHTML = `
+                        <div class="cursor-pointer" style="border-left-color: ${this.users.get(userId).color};"></div>
+                        <div class="cursor-label">${this.users.get(userId).name}</div>
+                    `;
+                    document.body.appendChild(cursor);
+                    this.cursors.set(userId, cursor);
+                }
+                
+                cursor.style.left = position.x + 'px';
+                cursor.style.top = position.y + 'px';
+                cursor.style.display = 'block';
+                
+                // 自动隐藏光标
+                clearTimeout(cursor.hideTimeout);
+                cursor.hideTimeout = setTimeout(() => {
+                    this.hideUserCursor(userId);
+                }, 3000);
+            }
+
+            hideUserCursor(userId) {
+                const cursor = this.cursors.get(userId);
+                if (cursor) {
+                    cursor.style.display = 'none';
+                }
+            }
+
+            highlightUserSelection(userId, selection) {
+                // 移除之前的选择高亮
+                const existingHighlight = document.querySelector(`[data-user-selection="${userId}"]`);
+                if (existingHighlight) {
+                    existingHighlight.remove();
+                }
+                
+                if (selection.nodeId) {
+                    const node = document.getElementById(selection.nodeId);
+                    if (node) {
+                        const highlight = document.createElement('div');
+                        highlight.className = 'node-selection';
+                        highlight.setAttribute('data-user-selection', userId);
+                        highlight.style.borderColor = this.users.get(userId).color;
+                        highlight.style.left = node.style.left;
+                        highlight.style.top = node.style.top;
+                        highlight.style.width = node.offsetWidth + 'px';
+                        highlight.style.height = node.offsetHeight + 'px';
+                        
+                        document.getElementById('canvas').appendChild(highlight);
+                        
+                        // 自动移除高亮
+                        setTimeout(() => {
+                            highlight.remove();
+                        }, 2000);
+                    }
+                }
+            }
+
+            updateOnlineUsersList() {
+                const usersList = document.getElementById('usersList');
+                usersList.innerHTML = '';
+                
+                this.users.forEach(user => {
+                    const userItem = document.createElement('div');
+                    userItem.className = 'user-item';
+                    userItem.innerHTML = `
+                        <div class="user-avatar" style="background-color: ${user.color};">
+                            ${user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span>${user.name}</span>
+                    `;
+                    usersList.appendChild(userItem);
+                });
+            }
+
+            removeUser(userId) {
+                this.users.delete(userId);
+                this.hideUserCursor(userId);
+                
+                const selection = document.querySelector(`[data-user-selection="${userId}"]`);
+                if (selection) {
+                    selection.remove();
+                }
+                
+                this.updateOnlineUsersList();
+            }
+        }
+
+        // 变更跟踪器
+        class ChangeTracker {
+            constructor() {
+                this.changes = [];
+                this.maxHistorySize = 100;
+                this.changeIdCounter = 0;
+            }
+
+            trackChange(changeType, data) {
+                const change = {
+                    id: this.generateChangeId(),
+                    type: changeType,
+                    data: data,
+                    timestamp: Date.now(),
+                    userId: collaborationEngine.userId
+                };
+                
+                this.changes.push(change);
+                
+                // 限制历史记录大小
+                if (this.changes.length > this.maxHistorySize) {
+                    this.changes.shift();
+                }
+                
+                return change;
+            }
+
+            generateChangeId() {
+                return `change_${++this.changeIdCounter}_${Date.now()}`;
+            }
+
+            applyRemoteChange(change) {
+                // 记录远程变更，但不触发本地广播
+                this.changes.push({
+                    ...change,
+                    remote: true
+                });
+            }
+
+            getChangeHistory() {
+                return [...this.changes];
+            }
+
+            getLastChange() {
+                return this.changes[this.changes.length - 1];
+            }
+        }
+
+        // 冲突解决器
+        class ConflictResolver {
+            checkConflict(remoteData, localElement) {
+                const localData = this.extractElementData(localElement);
+                
+                // 检查时间戳冲突
+                if (Math.abs(remoteData.timestamp - Date.now()) < 1000) {
+                    return {
+                        id: `conflict_${Date.now()}`,
+                        type: 'concurrent_edit',
+                        local: localData,
+                        remote: remoteData,
+                        message: '检测到并发编辑冲突，请选择要保留的版本。'
+                    };
+                }
+                
                 return null;
             }
-            
-            static saveUsers() {
-                localStorage.setItem('users', JSON.stringify(this.users));
-            }
-        }
 
-        // 认证服务
-        class AuthService {
-            static async register(userData) {
-                if (userData.password !== userData.confirmPassword) {
-                    throw new Error('密码确认不匹配');
-                }
-                
-                const user = await UserModel.create(userData);
-                const accessToken = JWTUtils.generateAccessToken({ userId: user.id, email: user.email, role: user.role });
-                const refreshToken = JWTUtils.generateRefreshToken({ userId: user.id });
-                
-                // 保存令牌
-                localStorage.setItem('accessToken', accessToken);
-                localStorage.setItem('refreshToken', refreshToken);
-                
-                return { user, accessToken, refreshToken };
-            }
-            
-            static async login(email, password) {
-                const user = await UserModel.validatePassword(email, password);
-                if (!user) {
-                    throw new Error('邮箱或密码错误');
-                }
-                
-                const accessToken = JWTUtils.generateAccessToken({ userId: user.id, email: user.email, role: user.role });
-                const refreshToken = JWTUtils.generateRefreshToken({ userId: user.id });
-                
-                // 保存令牌
-                localStorage.setItem('accessToken', accessToken);
-                localStorage.setItem('refreshToken', refreshToken);
-                
-                return { user, accessToken, refreshToken };
-            }
-            
-            static logout() {
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-            }
-            
-            static refreshAccessToken() {
-                const refreshToken = localStorage.getItem('refreshToken');
-                if (!refreshToken) {
-                    throw new Error('没有刷新令牌');
-                }
-                
-                const payload = JWTUtils.verifyToken(refreshToken);
-                if (!payload) {
-                    throw new Error('刷新令牌无效或已过期');
-                }
-                
-                const user = UserModel.findById(payload.userId);
-                if (!user) {
-                    throw new Error('用户不存在');
-                }
-                
-                const { password, ...userInfo } = user;
-                const newAccessToken = JWTUtils.generateAccessToken({ 
-                    userId: userInfo.id, 
-                    email: userInfo.email, 
-                    role: userInfo.role 
-                });
-                
-                localStorage.setItem('accessToken', newAccessToken);
-                
-                return { user: userInfo, accessToken: newAccessToken };
-            }
-            
-            static getCurrentUser() {
-                const accessToken = localStorage.getItem('accessToken');
-                if (!accessToken) return null;
-                
-                const payload = JWTUtils.verifyToken(accessToken);
-                if (!payload) return null;
-                
-                const user = UserModel.findById(payload.userId);
-                if (!user) return null;
-                
-                const { password, ...userInfo } = user;
-                return userInfo;
-            }
-            
-            static isAuthenticated() {
-                const accessToken = localStorage.getItem('accessToken');
-                if (!accessToken) return false;
-                
-                const payload = JWTUtils.verifyToken(accessToken);
-                return payload !== null;
-            }
-        }
-
-        createApp({
-            setup() {
-                const isLoginMode = ref(true);
-                const loading = ref(false);
-                const message = ref('');
-                const messageType = ref('success');
-                const currentUser = ref(null);
-                const accessToken = ref('');
-                const refreshTokenValue = ref('');
-                
-                const form = ref({
-                    username: '',
-                    email: '',
-                    password: '',
-                    confirmPassword: ''
-                });
-                
-                const isAuthenticated = computed(() => {
-                    return AuthService.isAuthenticated();
-                });
-                
-                const tokenExpiry = computed(() => {
-                    if (!accessToken.value) return '';
-                    
-                    const payload = JWTUtils.decodeToken(accessToken.value);
-                    if (!payload || !payload.exp) return '';
-                    
-                    return new Date(payload.exp * 1000).toLocaleString();
-                });
-                
-                const showMessage = (msg, type = 'success') => {
-                    message.value = msg;
-                    messageType.value = type;
-                    setTimeout(() => {
-                        message.value = '';
-                    }, 5000);
-                };
-                
-                const clearForm = () => {
-                    form.value = {
-                        username: '',
-                        email: '',
-                        password: '',
-                        confirmPassword: ''
-                    };
-                };
-                
-                const toggleMode = () => {
-                    isLoginMode.value = !isLoginMode.value;
-                    clearForm();
-                    message.value = '';
-                };
-                
-                const register = async () => {
-                    loading.value = true;
-                    try {
-                        const result = await AuthService.register(form.value);
-                        currentUser.value = result.user;
-                        accessToken.value = result.accessToken;
-                        refreshTokenValue.value = result.refreshToken;
-                        showMessage('注册成功！', 'success');
-                        clearForm();
-                    } catch (error) {
-                        showMessage(error.message, 'error');
-                    } finally {
-                        loading.value = false;
-                    }
-                };
-                
-                const login = async () => {
-                    loading.value = true;
-                    try {
-                        const result = await AuthService.login(form.value.email, form.value.password);
-                        currentUser.value = result.user;
-                        accessToken.value = result.accessToken;
-                        refreshTokenValue.value = result.refreshToken;
-                        showMessage('登录成功！', 'success');
-                        clearForm();
-                    } catch (error) {
-                        showMessage(error.message, 'error');
-                    } finally {
-                        loading.value = false;
-                    }
-                };
-                
-                const logout = () => {
-                    AuthService.logout();
-                    currentUser.value = null;
-                    accessToken.value = '';
-                    refreshTokenValue.value = '';
-                    showMessage('已退出登录', 'success');
-                };
-                
-                const refreshToken = async () => {
-                    loading.value = true;
-                    try {
-                        const result = AuthService.refreshAccessToken();
-                        currentUser.value = result.user;
-                        accessToken.value = result.accessToken;
-                        showMessage('令牌刷新成功！', 'success');
-                    } catch (error) {
-                        showMessage(error.message, 'error');
-                        if (error.message.includes('刷新令牌')) {
-                            logout();
-                        }
-                    } finally {
-                        loading.value = false;
-                    }
-                };
-                
-                const formatDate = (dateString) => {
-                    if (!dateString) return '从未';
-                    return new Date(dateString).toLocaleString();
-                };
-                
-                const initializeAuth = () => {
-                    if (AuthService.isAuthenticated()) {
-                        currentUser.value = AuthService.getCurrentUser();
-                        accessToken.value = localStorage.getItem('accessToken') || '';
-                        refreshTokenValue.value = localStorage.getItem('refreshToken') || '';
-                    }
-                };
-                
-                onMounted(() => {
-                    initializeAuth();
-                });
-                
+            extractElementData(element) {
                 return {
-                    isLoginMode,
-                    loading,
-                    message,
-                    messageType,
-                    currentUser,
-                    accessToken,
-                    refreshTokenValue,
-                    form,
-                    isAuthenticated,
-                    tokenExpiry,
-                    toggleMode,
-                    register,
-                    login,
-                    logout,
-                    refreshToken,
-                    formatDate
+                    id: element.id,
+                    position: {
+                        x: parseInt(element.style.left) || 0,
+                        y: parseInt(element.style.top) || 0
+                    },
+                    properties: this.extractProperties(element)
                 };
             }
-        }).mount('#app');
+
+            extractProperties(element) {
+                const properties = {};
+                const inputs = element.querySelectorAll('input, select');
+                
+                inputs.forEach(input => {
+                    const property = input.getAttribute('data-property');
+                    if (property) {
+                        properties[property] = input.value;
+                    }
+                });
+                
+                return properties;
+            }
+        }
+
+        // 协作UI管理器
+        class CollaborationUI {
+            showConflictDialog(conflictData) {
+                const existingDialog = document.querySelector('.conflict-dialog');
+                if (existingDialog) {
+                    existingDialog.remove();
+                }
+                
+                const dialog = document.createElement('div');
+                dialog.className = 'conflict-dialog';
+                dialog.innerHTML = `
+                    <h3>编辑冲突</h3>
+                    <p>${conflictData.message}</p>
+                    <div class="conflict-details">
+                        <div><strong>本地版本:</strong> ${JSON.stringify(conflictData.local, null, 2)}</div>
+                        <div><strong>远程版本:</strong> ${JSON.stringify(conflictData.remote, null, 2)}</div>
+                    </div>
+                    <div class="conflict-actions">
+                        <button class="conflict-btn accept" onclick="resolveConflict('${conflictData.id}', 'accept_remote')">接受远程</button>
+                        <button class="conflict-btn reject" onclick="resolveConflict('${conflictData.id}', 'keep_local')">保留本地</button>
+                    </div>
+                `;
+                
+                document.body.appendChild(dialog);
+            }
+
+            hideConflictDialog() {
+                const dialog = document.querySelector('.conflict-dialog');
+                if (dialog) {
+                    dialog.remove();
+                }
+            }
+        }
+
+        // 全局实例
+        let wsManager, collaborationEngine, presenceManager, changeTracker, collaborationUI;
+        let nodeCounter = 0;
+        let selectedNode = null;
+        let isConnecting = false;
+        let tempConnection = null;
+
+        // 初始化协作系统
+        function initCollaboration() {
+            wsManager = new WebSocketManager();
+            collaborationEngine = new CollaborationEngine(wsManager);
+            presenceManager = new PresenceManager();
+            changeTracker = new ChangeTracker();
+            collaborationUI = new CollaborationUI();
+            
+            // 尝试连接到WebSocket服务器
+            wsManager.connect().catch(error => {
+                console.log('WebSocket连接失败，将在离线模式下工作:', error.message);
+            });
+            
+            // 监听鼠标移动以发送光标位置
+            document.addEventListener('mousemove', (e) => {
+                if (wsManager.ws && wsManager.ws.readyState === WebSocket.OPEN) {
+                    wsManager.send({
+                        type: 'user_presence',
+                        userId: collaborationEngine.userId,
+                        data: {
+                            cursor: { x: e.clientX, y: e.clientY },
+                            name: `用户${collaborationEngine.userId.slice(-4)}`
+                        }
+                    });
+                }
+            });
+        }
+
+        // 创建节点
+        function createNode(type) {
+            const canvas = document.getElementById('canvas');
+            const node = document.createElement('div');
+            const nodeId = `node_${++nodeCounter}_${Date.now()}`;
+            
+            node.className = `node ${type}-node`;
+            node.id = nodeId;
+            node.style.left = Math.random() * (canvas.offsetWidth - 200) + 'px';
+            node.style.top = Math.random() * (canvas.offsetHeight - 150) + 'px';
+            
+            const typeNames = {
+                'input': '输入节点',
+                'process': '处理节点',
+                'output': '输出节点'
+            };
+            
+            node.innerHTML = `
+                <div class="node-header">${typeNames[type]}</div>
+                <div class="node-content">
+                    <div class="node-input">
+                        <label>节点名称</label>
+                        <input type="text" value="${typeNames[type]}" data-property="name" onchange="updateNodeProperty('${nodeId}', 'name', this.value)">
+                    </div>
+                    ${type === 'input' ? `
+                        <div class="node-input">
+                            <label>数据类型</label>
+                            <select data-property="dataType" onchange="updateNodeProperty('${nodeId}', 'dataType', this.value)">
+                                <option value="text">文本</option>
+                                <option value="number">数字</option>
+                                <option value="file">文件</option>
+                            </select>
+                        </div>
+                    ` : ''}
+                    ${type === 'process' ? `
+                        <div class="node-input">
+                            <label>处理类型</label>
+                            <select data-property="processType" onchange="updateNodeProperty('${nodeId}', 'processType', this.value)">
+                                <option value="transform">转换</option>
+                                <option value="filter">过滤</option>
+                                <option value="aggregate">聚合</option>
+                            </select>
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="connection-point input-point" style="top: 50%;"></div>
+                <div class="connection-point output-point" style="top: 50%;"></div>
+            `;
+            
+            canvas.appendChild(node);
+            makeNodeDraggable(node);
+            setupConnectionPoints(node);
+            
+            // 跟踪变更并广播
+            const change = changeTracker.trackChange('node_create', {
+                id: nodeId,
+                type: type,
+                position: {
+                    x: parseInt(node.style.left),
+                    y: parseInt(node.style.top)
+                },
+                name: typeNames[type]
+            });
+            
+            if (collaborationEngine) {
+                collaborationEngine.broadcastChange({
+                    type: 'node_update',
+                    data: {
+                        id: nodeId,
+                        type: type,
+                        action: 'create',
+                        position: {
+                            x: parseInt(node.style.left),
+                            y: parseInt(node.style.top)
+                        },
+                        name: typeNames[type]
+                    }
+                });
+            }
+        }
+
+        // 更新节点属性
+        function updateNodeProperty(nodeId, property, value) {
+            const change = changeTracker.trackChange('node_property_update', {
+                nodeId: nodeId,
+                property: property,
+                value: value
+            });
+            
+            if (collaborationEngine) {
+                collaborationEngine.broadcastChange({
+                    type: 'node_update',
+                    data: {
+                        id: nodeId,
+                        action: 'update',
+                        properties: {
+                            [property]: value
+                        }
+                    }
+                });
+            }
+        }
+
+        // 使节点可拖拽
+        function makeNodeDraggable(node) {
+            let isDragging = false;
+            let startX, startY, initialX, initialY;
+            
+            node.addEventListener('mousedown', (e) => {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+                
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                initialX = parseInt(node.style.left) || 0;
+                initialY = parseInt(node.style.top) || 0;
+                
+                node.style.zIndex = 1000;
+                selectedNode = node;
+                
+                // 高亮选中的节点
+                document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
+                node.classList.add('selected');
+                
+                // 广播选择状态
+                if (collaborationEngine) {
+                    wsManager.send({
+                        type: 'user_presence',
+                        userId: collaborationEngine.userId,
+                        data: {
+                            selection: { nodeId: node.id },
+                            name: `用户${collaborationEngine.userId.slice(-4)}`
+                        }
+                    });
+                }
+                
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const deltaX = e.clientX - startX;
+                const deltaY = e.clientY - startY;
+                
+                const newX = Math.max(0, initialX + deltaX);
+                const newY = Math.max(0, initialY + deltaY);
+                
+                node.style.left = newX + 'px';
+                node.style.top = newY + 'px';
+                
+                updateConnections(node);
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    node.style.zIndex = '';
+                    
+                    // 跟踪移动变更
+                    const change = changeTracker.trackChange('node_move', {
+                        nodeId: node.id,
+                        position: {
+                            x: parseInt(node.style.left),
+                            y: parseInt(node.style.top)
+                        }
+                    });
+                    
+                    // 广播位置更新
+                    if (collaborationEngine) {
+                        collaborationEngine.broadcastChange({
+                            type: 'node_update',
+                            data: {
+                                id: node.id,
+                                action: 'move',
+                                position: {
+                                    x: parseInt(node.style.left),
+                                    y: parseInt(node.style.top)
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        // 设置连接点
+        function setupConnectionPoints(node) {
+            const inputPoint = node.querySelector('.input-point');
+            const outputPoint = node.querySelector('.output-point');
+            
+            outputPoint.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+                startConnection(node, outputPoint, e);
+            });
+            
+            inputPoint.addEventListener('mouseup', (e) => {
+                e.stopPropagation();
+                endConnection(node, inputPoint);
+            });
+        }
+
+        // 开始连接
+        function startConnection(fromNode, fromPoint, e) {
+            isConnecting = true;
+            
+            const svg = document.getElementById('connections');
+            tempConnection = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            tempConnection.setAttribute('class', 'temp-connection');
+            svg.appendChild(tempConnection);
+            
+            const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+            const fromRect = fromPoint.getBoundingClientRect();
+            
+            const startX = fromRect.left + fromRect.width / 2 - canvasRect.left;
+            const startY = fromRect.top + fromRect.height / 2 - canvasRect.top;
+            
+            document.addEventListener('mousemove', updateTempConnection);
+            document.addEventListener('mouseup', cancelConnection);
+            
+            function updateTempConnection(e) {
+                if (!tempConnection) return;
+                
+                const endX = e.clientX - canvasRect.left;
+                const endY = e.clientY - canvasRect.top;
+                
+                const controlX1 = startX + (endX - startX) / 3;
+                const controlY1 = startY;
+                const controlX2 = startX + 2 * (endX - startX) / 3;
+                const controlY2 = endY;
+                
+                const path = `M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`;
+                tempConnection.setAttribute('d', path);
+            }
+            
+            function cancelConnection() {
+                if (tempConnection) {
+                    tempConnection.remove();
+                    tempConnection = null;
+                }
+                isConnecting = false;
+                document.removeEventListener('mousemove', updateTempConnection);
+                document.removeEventListener('mouseup', cancelConnection);
+            }
+        }
+
+        // 结束连接
+        function endConnection(toNode, toPoint) {
+            if (!isConnecting || !tempConnection) return;
+            
+            // 创建永久连接
+            tempConnection.setAttribute('class', 'established-connection');
+            tempConnection.setAttribute('data-from', selectedNode.id);
+            tempConnection.setAttribute('data-to', toNode.id);
+            
+            const connectionId = `conn_${Date.now()}`;
+            tempConnection.setAttribute('data-connection-id', connectionId);
+            
+            // 跟踪连接变更
+            const change = changeTracker.trackChange('connection_create', {
+                id: connectionId,
+                from: selectedNode.id,
+                to: toNode.id
+            });
+            
+            // 广播连接创建
+            if (collaborationEngine) {
+                collaborationEngine.broadcastChange({
+                    type: 'connection_update',
+                    data: {
+                        id: connectionId,
+                        action: 'create',
+                        from: selectedNode.id,
+                        to: toNode.id
+                    }
+                });
+            }
+            
+            tempConnection = null;
+            isConnecting = false;
+            
+            document.removeEventListener('mousemove', updateTempConnection);
+            document.removeEventListener('mouseup', cancelConnection);
+        }
+
+        // 更新连接线
+        function updateConnections(node) {
+            const connections = document.querySelectorAll(`[data-from="${node.id}"], [data-to="${node.id}"]`);
+            
+            connections.forEach(connection => {
+                const fromNodeId = connection.getAttribute('data-from');
+                const toNodeId = connection.getAttribute('data-to');
+                updateConnectionPath(connection, fromNodeId, toNodeId);
+            });
+        }
+
+        // 更新连接路径
+        function updateConnectionPath(line, fromNodeId, toNodeId) {
+            const fromNode = document.getElementById(fromNodeId);
+            const toNode = document.getElementById(toNodeId);
+            
+            if (!fromNode || !toNode) return;
+            
+            const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+            const fromRect = fromNode.getBoundingClientRect();
+            const toRect = toNode.getBoundingClientRect();
+            
+            const startX = fromRect.right - canvasRect.left;
+            const startY = fromRect.top + fromRect.height / 2 - canvasRect.top;
+            const endX = toRect.left - canvasRect.left;
+            const endY = toRect.top + toRect.height / 2 - canvasRect.top;
+            
+            const controlX1 = startX + (endX - startX) / 3;
+            const controlY1 = startY;
+            const controlX2 = startX + 2 * (endX - startX) / 3;
+            const controlY2 = endY;
+            
+            const path = `M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`;
+            line.setAttribute('d', path);
+        }
+
+        // 解决冲突
+        function resolveConflict(conflictId, resolution) {
+            if (collaborationEngine) {
+                collaborationEngine.resolveConflict({ id: conflictId }, resolution);
+            }
+            collaborationUI.hideConflictDialog();
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            initCollaboration();
+            
+            // 添加键盘快捷键
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Delete' && selectedNode) {
+                    // 删除选中的节点
+                    const nodeId = selectedNode.id;
+                    selectedNode.remove();
+                    
+                    // 删除相关连接
+                    const connections = document.querySelectorAll(`[data-from="${nodeId}"], [data-to="${nodeId}"]`);
+                    connections.forEach(conn => conn.remove());
+                    
+                    // 跟踪删除变更
+                    const change = changeTracker.trackChange('node_delete', {
+                        nodeId: nodeId
+                    });
+                    
+                    // 广播删除
+                    if (collaborationEngine) {
+                        collaborationEngine.broadcastChange({
+                            type: 'node_update',
+                            data: {
+                                id: nodeId,
+                                action: 'delete'
+                            }
+                        });
+                    }
+                    
+                    selectedNode = null;
+                }
+            });
+        });
     </script>
 </body>
 </html>
