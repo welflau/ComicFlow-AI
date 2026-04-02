@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基础组件库演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .demo-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #e8e8e8;
+            border-radius: 6px;
+        }
+
+        .demo-section h2 {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .demo-row {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        /* Button 组件样式 */
+        .base-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            outline: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .base-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* Button 尺寸 */
+        .base-button--small {
+            height: 28px;
+            padding: 0 12px;
+            font-size: 12px;
+        }
+
+        .base-button--medium {
+            height: 36px;
+            padding: 0 16px;
+            font-size: 14px;
+        }
+
+        .base-button--large {
+            height: 44px;
+            padding: 0 20px;
+            font-size: 16px;
+        }
+
+        /* Button 类型 */
+        .base-button--primary {
+            background-color: #1890ff;
+            border-color: #1890ff;
+            color: white;
+        }
+
+        .base-button--primary:hover:not(:disabled) {
+            background-color: #40a9ff;
+            border-color: #40a9ff;
+        }
+
+        .base-button--secondary {
+            background-color: white;
+            border-color: #d9d9d9;
+            color: #333;
+        }
+
+        .base-button--secondary:hover:not(:disabled) {
+            border-color: #1890ff;
+            color: #1890ff;
+        }
+
+        .base-button--danger {
+            background-color: #ff4d4f;
+            border-color: #ff4d4f;
+            color: white;
+        }
+
+        .base-button--danger:hover:not(:disabled) {
+            background-color: #ff7875;
+            border-color: #ff7875;
+        }
+
+        .base-button--text {
+            background-color: transparent;
+            border-color: transparent;
+            color: #1890ff;
+        }
+
+        .base-button--text:hover:not(:disabled) {
+            background-color: #f0f8ff;
+        }
+
+        /* Loading 动画 */
+        .loading-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 6px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Input 组件样式 */
+        .base-input {
+            position: relative;
+            display: inline-block;
+            width: 200px;
+        }
+
+        .base-input__inner {
+            width: 100%;
+            height: 36px;
+            padding: 0 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        .base-input__inner:focus {
+            border-color: #1890ff;
+            box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+        }
+
+        .base-input__inner:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+
+        .base-input__inner.error {
+            border-color: #ff4d4f;
+        }
+
+        .base-input__inner.error:focus {
+            box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
+        }
+
+        .base-input__error {
+            color: #ff4d4f;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        /* Modal 组件样式 */
+        .base-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .base-modal__mask {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .base-modal__container {
+            position: relative;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            max-height: 80vh;
+            overflow: hidden;
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .base-modal__header {
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .base-modal__title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .base-modal__close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .base-modal__close:hover {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .base-modal__body {
+            padding: 20px 24px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .base-modal__footer {
+            padding: 16px 24px 20px;
+            border-top: 1px solid #e8e8e8;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <h1>基础组件库演示</h1>
+            
+            <!-- Button 组件演示 -->
+            <div class="demo-section">
+                <h2>Button 按钮组件</h2>
+                <div class="demo-row">
+                    <span>不同类型：</span>
+                    <base-button type="primary" @click="handleClick">主要按钮</base-button>
+                    <base-button type="secondary" @click="handleClick">次要按钮</base-button>
+                    <base-button type="danger" @click="handleClick">危险按钮</base-button>
+                    <base-button type="text" @click="handleClick">文本按钮</base-button>
+                </div>
+                <div class="demo-row">
+                    <span>不同尺寸：</span>
+                    <base-button type="primary" size="small">小按钮</base-button>
+                    <base-button type="primary" size="medium">中按钮</base-button>
+                    <base-button type="primary" size="large">大按钮</base-button>
+                </div>
+                <div class="demo-row">
+                    <span>状态：</span>
+                    <base-button type="primary" :disabled="true">禁用按钮</base-button>
+                    <base-button type="primary" :loading="buttonLoading" @click="toggleLoading">{{buttonLoading ? '加载中...' : '点击加载'}}</base-button>
+                </div>
+            </div>
+
+            <!-- Input 组件演示 -->
+            <div class="demo-section">
+                <h2>Input 输入框组件</h2>
+                <div class="demo-row">
+                    <span>基础输入：</span>
+                    <base-input v-model="inputValue1" placeholder="请输入内容"></base-input>
+                    <span>当前值：{{inputValue1}}</span>
+                </div>
+                <div class="demo-row">
+                    <span>密码输入：</span>
+                    <base-input v-model="inputValue2" type="password" placeholder="请输入密码"></base-input>
+                </div>
+                <div class="demo-row">
+                    <span>禁用状态：</span>
+                    <base-input v-model="inputValue3" :disabled="true" placeholder="禁用输入框"></base-input>
+                </div>
+                <div class="demo-row">
+                    <span>验证输入：</span>
+                    <base-input 
+                        v-model="inputValue4" 
+                        placeholder="请输入邮箱" 
+                        :rules="emailRules"
+                        @blur="validateEmail"
+                    ></base-input>
+                </div>
+            </div>
+
+            <!-- Modal 组件演示 -->
+            <div class="demo-section">
+                <h2>Modal 模态框组件</h2>
+                <div class="demo-row">
+                    <base-button type="primary" @click="showModal1 = true">基础模态框</base-button>
+                    <base-button type="primary" @click="showModal2 = true">自定义模态框</base-button>
+                    <base-button type="primary" @click="showModal3 = true">确认对话框</base-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal 实例 -->
+        <base-modal 
+            :visible="showModal1" 
+            title="基础模态框" 
+            @close="showModal1 = false"
+            @confirm="handleModal1Confirm"
+        >
+            <p>这是一个基础的模态框内容。</p>
+            <p>可以放置任何内容。</p>
+        </base-modal>
+
+        <base-modal 
+            :visible="showModal2" 
+            title="自定义模态框" 
+            width="600px"
+            @close="showModal2 = false"
+        >
+            <template #header>
+                <div style="color: #1890ff; font-weight: bold;">🎉 自定义标题</div>
+            </template>
+            <div>
+                <h3>自定义内容区域</h3>
+                <p>这里可以放置复杂的内容结构。</p>
+                <base-input v-model="modalInput" placeholder="模态框中的输入框"></base-input>
+            </div>
+            <template #footer>
+                <base-button type="secondary" @click="showModal2 = false">取消</base-button>
+                <base-button type="primary" @click="handleModal2Confirm">确定</base-button>
+            </template>
+        </base-modal>
+
+        <base-modal 
+            :visible="showModal3" 
+            title="确认对话框" 
+            width="400px"
+            @close="showModal3 = false"
+        >
+            <p>确定要执行此操作吗？</p>
+            <template #footer>
+                <base-button type="secondary" @click="showModal3 = false">取消</base-button>
+                <base-button type="danger" @click="handleModal3Confirm">确定</base-button>
+            </template>
+        </base-modal>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        // BaseButton 组件
+        const BaseButton = {
+            name: 'BaseButton',
+            props: {
+                type: {
+                    type: String,
+                    default: 'secondary',
+                    validator: (value) => ['primary', 'secondary', 'danger', 'text'].includes(value)
+                },
+                size: {
+                    type: String,
+                    default: 'medium',
+                    validator: (value) => ['small', 'medium', 'large'].includes(value)
+                },
+                disabled: {
+                    type: Boolean,
+                    default: false
+                },
+                loading: {
+                    type: Boolean,
+                    default: false
+                }
+            },
+            emits: ['click', 'focus', 'blur'],
+            setup(props, { emit, slots }) {
+                const buttonClass = computed(() => {
+                    return [
+                        'base-button',
+                        `base-button--${props.type}`,
+                        `base-button--${props.size}`
+                    ];
+                });
+
+                const handleClick = (event) => {
+                    if (!props.disabled && !props.loading) {
+                        emit('click', event);
+                    }
+                };
+
+                const handleFocus = (event) => {
+                    emit('focus', event);
+                };
+
+                const handleBlur = (event) => {
+                    emit('blur', event);
+                };
+
+                return {
+                    buttonClass,
+                    handleClick,
+                    handleFocus,
+                    handleBlur
+                };
+            },
+            template: `
+                <button 
+                    :class="buttonClass"
+                    :disabled="disabled || loading"
+                    @click="handleClick"
+                    @focus="handleFocus"
+                    @blur="handleBlur"
+                >
+                    <span v-if="loading" class="loading-spinner"></span>
+                    <slot name="icon"></slot>
+                    <slot></slot>
+                </button>
+            `
+        };
+
+        // BaseInput 组件
+        const BaseInput = {
+            name: 'BaseInput',
+            props: {
+                modelValue: {
+                    type: [String, Number],
+                    default: ''
+                },
+                type: {
+                    type: String,
+                    default: 'text'
+                },
+                placeholder: {
+                    type: String,
+                    default: ''
+                },
+                disabled: {
+                    type: Boolean,
+                    default: false
+                },
+                readonly: {
+                    type: Boolean,
+                    default: false
+                },
+                rules: {
+                    type: Array,
+                    default: () => []
+                }
+            },
+            emits: ['update:modelValue', 'input', 'change', 'focus', 'blur'],
+            setup(props, { emit }) {
+                const errorMessage = ref('');
+                const hasError = computed(() => !!errorMessage.value);
+
+                const handleInput = (event) => {
+                    const value = event.target.value;
+                    emit('update:modelValue', value);
+                    emit('input', value);
+                    // 清除错误信息
+                    if (errorMessage.value) {
+                        errorMessage.value = '';
+                    }
+                };
+
+                const handleChange = (event) => {
+                    emit('change', event.target.value);
+                };
+
+                const handleFocus = (event) => {
+                    emit('focus', event);
+                };
+
+                const handleBlur = (event) => {
+                    emit('blur', event);
+                    validate();
+                };
+
+                const validate = () => {
+                    if (props.rules.length === 0) return true;
+                    
+                    for (const rule of props.rules) {
+                        if (typeof rule === 'function') {
+                            const result = rule(props.modelValue);
+                            if (result !== true) {
+                                errorMessage.value = result;
+                                return false;
+                            }
+                        }
+                    }
+                    
+                    errorMessage.value = '';
+                    return true;
+                };
+
+                const inputClass = computed(() => {
+                    return {
+                        'base-input__inner': true,
+                        'error': hasError.value
+                    };
+                });
+
+                return {
+                    errorMessage,
+                    hasError,
+                    inputClass,
+                    handleInput,
+                    handleChange,
+                    handleFocus,
+                    handleBlur,
+                    validate
+                };
+            },
+            template: `
+                <div class="base-input">
+                    <input 
+                        :class="inputClass"
+                        :type="type"
+                        :value="modelValue"
+                        :placeholder="placeholder"
+                        :disabled="disabled"
+                        :readonly="readonly"
+                        @input="handleInput"
+                        @change="handleChange"
+                        @focus="handleFocus"
+                        @blur="handleBlur"
+                    />
+                    <div v-if="hasError" class="base-input__error">{{ errorMessage }}</div>
+                </div>
+            `
+        };
+
+        // BaseModal 组件
+        const BaseModal = {
+            name: 'BaseModal',
+            props: {
+                visible: {
+                    type: Boolean,
+                    default: false
+                },
+                title: {
+                    type: String,
+                    default: ''
+                },
+                width: {
+                    type: String,
+                    default: '500px'
+                },
+                closable: {
+                    type: Boolean,
+                    default: true
+                }
+            },
+            emits: ['close', 'confirm', 'cancel'],
+            setup(props, { emit, slots }) {
+                const handleMaskClick = () => {
+                    if (props.closable) {
+                        emit('close');
+                    }
+                };
+
+                const handleClose = () => {
+                    emit('close');
+                };
+
+                const handleConfirm = () => {
+                    emit('confirm');
+                };
+
+                const handleCancel = () => {
+                    emit('cancel');
+                    emit('close');
+                };
+
+                const containerStyle = computed(() => {
+                    return {
+                        width: props.width
+                    };
+                });
+
+                return {
+                    handleMaskClick,
+                    handleClose,
+                    handleConfirm,
+                    handleCancel,
+                    containerStyle
+                };
+            },
+            template: `
+                <div v-if="visible" class="base-modal">
+                    <div class="base-modal__mask" @click="handleMaskClick"></div>
+                    <div class="base-modal__container" :style="containerStyle" @click.stop>
+                        <div class="base-modal__header" v-if="title || $slots.header">
+                            <slot name="header">
+                                <div class="base-modal__title">{{ title }}</div>
+                            </slot>
+                            <button v-if="closable" class="base-modal__close" @click="handleClose">×</button>
+                        </div>
+                        <div class="base-modal__body">
+                            <slot></slot>
+                        </div>
+                        <div class="base-modal__footer" v-if="$slots.footer">
+                            <slot name="footer"></slot>
+                        </div>
+                        <div class="base-modal__footer" v-else>
+                            <button class="base-button base-button--secondary base-button--medium" @click="handleCancel">取消</button>
+                            <button class="base-button base-button--primary base-button--medium" @click="handleConfirm">确定</button>
+                        </div>
+                    </div>
+                </div>
+            `
+        };
+
+        // 创建应用
+        const app = createApp({
+            components: {
+                BaseButton,
+                BaseInput,
+                BaseModal
+            },
+            setup() {
+                // 响应式数据
+                const buttonLoading = ref(false);
+                const inputValue1 = ref('');
+                const inputValue2 = ref('');
+                const inputValue3 = ref('禁用的值');
+                const inputValue4 = ref('');
+                const modalInput = ref('');
+                const showModal1 = ref(false);
+                const showModal2 = ref(false);
+                const showModal3 = ref(false);
+
+                // 邮箱验证规则
+                const emailRules = [
+                    (value) => {
+                        if (!value) return '请输入邮箱地址';
+                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                        return emailRegex.test(value) || '请输入有效的邮箱地址';
+                    }
+                ];
+
+                // 事件处理
+                const handleClick = () => {
+                    console.log('按钮被点击了');
+                };
+
+                const toggleLoading = () => {
+                    buttonLoading.value = true;
+                    setTimeout(() => {
+                        buttonLoading.value = false;
+                    }, 2000);
+                };
+
+                const validateEmail = () => {
+                    // 触发验证
+                };
+
+                const handleModal1Confirm = () => {
+                    console.log('模态框1确认');
+                    showModal1.value = false;
+                };
+
+                const handleModal2Confirm = () => {
+                    console.log('模态框2确认，输入值：', modalInput.value);
+                    showModal2.value = false;
+                };
+
+                const handleModal3Confirm = () => {
+                    console.log('执行危险操作');
+                    showModal3.value = false;
+                };
+
+                return {
+                    buttonLoading,
+                    inputValue1,
+                    inputValue2,
+                    inputValue3,
+                    inputValue4,
+                    modalInput,
+                    showModal1,
+                    showModal2,
+                    showModal3,
+                    emailRules,
+                    handleClick,
+                    toggleLoading,
+                    validateEmail,
+                    handleModal1Confirm,
+                    handleModal2Confirm,
+                    handleModal3Confirm
+                };
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>
