@@ -11,52 +11,42 @@
 ## 模块设计
 
 ### 生产环境配置
-职责: 配置生产环境的部署参数、环境变量、SSL证书等
-- deploy/production.env
-- deploy/ssl/
+职责: 完善生产环境部署配置，包括环境变量、SSL证书、负载均衡等
 - deploy/docker-compose.prod.yml
+- deploy/env.production
+- deploy/ssl-config.conf
 
-### 监控配置
-职责: 配置系统监控、日志收集、性能监控等
-- deploy/monitoring/prometheus.yml
-- deploy/monitoring/grafana-dashboard.json
-- deploy/logs/logrotate.conf
+### 监控与日志
+职责: 配置应用监控、日志收集和告警机制
+- deploy/monitoring.yml
+- deploy/logrotate.conf
+- scripts/health-check.sh
 
 ### 技术文档
-职责: 编写架构文档、API文档、部署文档等技术文档
+职责: 编写系统架构文档、API文档和部署指南
 - docs/architecture.md
-- docs/api.md
-- docs/deployment.md
-- docs/development.md
+- docs/api-reference.md
+- docs/deployment-guide.md
 
 ### 用户手册
-职责: 编写用户使用手册、功能说明、FAQ等用户文档
-- docs/user-guide.md
-- docs/features.md
+职责: 编写用户操作手册和常见问题解答
+- docs/user-manual.md
 - docs/faq.md
 - docs/troubleshooting.md
 
-### 部署脚本增强
-职责: 增强现有部署脚本，添加生产环境部署、回滚、健康检查等功能
-- scripts/deploy-prod.sh
+### 自动化部署
+职责: 完善现有部署脚本，增加回滚和健康检查功能
 - scripts/rollback.sh
-- scripts/health-check.sh
 - scripts/backup.sh
-
-### CI/CD配置
-职责: 配置持续集成和持续部署流水线
-- .github/workflows/deploy.yml
-- .github/workflows/test.yml
-- deploy/ci-cd/jenkins.groovy
+- deploy/ci-cd.yml
 
 ## 数据流
-部署配置通过环境变量和配置文件传递给应用程序 -> 监控系统收集应用指标和日志 -> CI/CD流水线自动化部署和测试 -> 文档系统为开发者和用户提供指导
+基于现有的deploy/nginx.conf和pm2.config.js配置，扩展生产环境配置 -> 添加监控和日志收集 -> 生成技术文档和用户手册 -> 完善自动化部署流程 -> 提供运维工具和故障排查指南
 
 ## 关键决策
-- 基于现有的nginx.conf和pm2.config.js配置扩展生产环境配置
-- 使用Prometheus+Grafana作为监控解决方案
-- 采用GitHub Actions作为CI/CD平台
+- 基于现有nginx.conf和pm2.config.js配置进行扩展，不重新设计部署架构
+- 使用Docker Compose管理生产环境服务编排
+- 集成Prometheus + Grafana进行应用监控
+- 采用ELK Stack进行日志收集和分析
 - 文档使用Markdown格式，便于维护和版本控制
-- 部署脚本支持蓝绿部署和快速回滚
-- 配置SSL证书和安全加固措施
-- 集成健康检查和自动重启机制
+- 提供一键部署和回滚脚本，降低运维复杂度
