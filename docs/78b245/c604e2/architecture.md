@@ -10,48 +10,57 @@
 
 ## 模块设计
 
-### CanvasPerformanceManager
-职责: 画布性能监控和优化管理，包括FPS监控、内存使用追踪、渲染性能分析
-- startPerformanceMonitoring()
+### PerformanceManager
+职责: 画布性能监控和优化策略管理
+- startMonitoring()
 - getPerformanceMetrics()
-- optimizeRenderingPipeline()
-- enableLevelOfDetail()
+- optimizeRenderingStrategy()
+- enableLOD()
+- manageFrustumCulling()
 
-### NodeInstancePool
-职责: 节点对象池管理，复用节点实例减少GC压力，支持大量节点的高效渲染
-- getNodeInstance(type)
-- releaseNodeInstance(node)
-- preloadInstances(count)
-- clearPool()
+### NodePoolManager
+职责: 节点对象池管理，减少GC压力
+- getNode(type)
+- releaseNode(node)
+- preloadNodes(count)
+- cleanupPool()
 
-### ViewportCulling
-职责: 视口裁剪优化，只渲染可见区域内的节点和连线，提升大规模场景性能
-- updateVisibleNodes(camera)
-- cullInvisibleElements()
-- setFrustumCulling(enabled)
+### ViewportCuller
+职责: 视口裁剪，只渲染可见节点
+- updateViewport(camera)
+- cullNodes(nodeList)
+- isNodeVisible(node)
 - getBoundingBox(node)
 
-### RenderBatching
-职责: 渲染批处理优化，合并相似节点的渲染调用，减少WebGL draw calls
-- batchSimilarNodes(nodes)
-- flushBatches()
-- addToBatch(node)
-- optimizeDrawCalls()
+### LODController
+职责: 细节层次控制，根据距离调整节点复杂度
+- updateLOD(camera, nodes)
+- setLODLevel(node, level)
+- calculateDistance(node, camera)
+- switchGeometry(node, lodLevel)
 
-### PerformanceTestSuite
-职责: 性能测试套件，自动化测试1000+节点场景下的渲染性能和交互响应
-- runStressTest(nodeCount)
-- measureFrameRate(duration)
-- testInteractionLatency()
-- generatePerformanceReport()
+### BatchRenderer
+职责: 批量渲染相同类型节点，减少draw call
+- addToBatch(node)
+- renderBatch(nodeType)
+- clearBatch()
+- optimizeBatches()
+
+### PerformanceProfiler
+职责: 性能分析和测试工具
+- startProfiling()
+- stopProfiling()
+- generateReport()
+- testWithNodeCount(count)
+- measureFrameRate()
 
 ## 数据流
-性能监控器实时收集渲染指标 → 对象池管理节点实例生命周期 → 视口裁剪过滤可见元素 → 渲染批处理优化WebGL调用 → 测试套件验证性能指标 → 反馈优化建议到性能管理器
+PerformanceManager监控画布性能指标 -> ViewportCuller基于相机位置裁剪不可见节点 -> LODController根据距离调整节点细节级别 -> BatchRenderer将相同类型节点批量渲染 -> NodePoolManager复用节点对象减少内存分配 -> PerformanceProfiler持续监控并生成性能报告，当检测到性能下降时触发优化策略调整
 
 ## 关键决策
-- 采用对象池模式复用节点实例，避免频繁创建销毁导致的GC压力
-- 实现基于视锥体的裁剪算法，只渲染视口内可见的节点和连线
-- 使用实例化渲染技术批处理相同类型的节点，减少draw calls
-- 集成性能监控面板到现有index.html中，实时显示FPS和内存使用
-- 建立自动化性能测试流程，确保1000+节点场景下帧率稳定在60FPS以上
-- 采用LOD(Level of Detail)技术，根据缩放级别调整节点渲染精度
+- 采用视口裁剪技术，只渲染屏幕可见区域的节点，大幅减少渲染负载
+- 实现LOD系统，远距离节点使用简化几何体，近距离使用高精度模型
+- 使用对象池模式管理节点实例，避免频繁创建销毁对象造成GC压力
+- 实现批量渲染，将相同材质和几何体的节点合并为一次draw call
+- 集成性能监控工具，实时追踪FPS、内存使用和渲染时间等关键指标
+- 在现有index.html基础上添加性能调试面板，不改变现有页面结构
