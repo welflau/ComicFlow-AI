@@ -1,120 +1,77 @@
 import pytest
 from pathlib import Path
-import json
+import sys
 import os
-from unittest.mock import patch, mock_open
 
-class TestUserAuthModule:
-    """用户认证模块测试类"""
+# 添加项目根目录到Python路径
+project_root = Path(__file__).parent
+sys.path.insert(0, str(project_root))
+
+def test_main_module_can_be_imported():
+    """测试main.py模块是否可以正常导入"""
+    try:
+        import main
+        assert True
+    except ImportError as e:
+        pytest.fail(f"无法导入main模块: {e}")
+
+def test_main_file_exists():
+    """测试main.py文件是否存在于backend目录中"""
+    backend_dir = project_root / "backend"
+    main_file = backend_dir / "main.py"
+    assert main_file.exists(), f"main.py文件不存在于路径: {main_file}"
+    assert main_file.is_file(), f"main.py不是一个有效的文件: {main_file}"
+
+def test_dev_notes_file_exists_and_contains_content():
+    """测试开发文档文件是否存在并包含相关内容"""
+    docs_file = project_root / "docs" / "d2c78b" / "e0ab1e" / "dev-notes.md"
+    assert docs_file.exists(), f"开发文档文件不存在于路径: {docs_file}"
     
-    @pytest.fixture
-    def project_root(self):
-        """获取项目根目录路径"""
-        return Path(__file__).parent.parent
+    content = docs_file.read_text(encoding='utf-8')
+    assert len(content.strip()) > 0, "开发文档文件内容为空"
     
-    def test_html_file_exists_and_contains_auth_elements(self, project_root):
-        """测试HTML文件存在且包含用户认证相关的关键元素"""
-        html_file = project_root / "api" / "index.html"
-        
-        # 检查文件是否存在
-        assert html_file.exists(), f"HTML文件不存在: {html_file}"
-        
-        # 读取HTML内容并检查关键元素
-        content = html_file.read_text(encoding='utf-8')
-        
-        # 检查是否包含用户认证相关的关键元素
-        auth_keywords = ['login', 'password', 'username', 'auth', 'signin', 'user']
-        found_keywords = [keyword for keyword in auth_keywords if keyword.lower() in content.lower()]
-        
-        assert len(found_keywords) > 0, f"HTML文件中未找到用户认证相关元素，期望包含: {auth_keywords}"
-        assert '<html' in content.lower(), "HTML文件格式不正确，缺少html标签"
-        assert '<body' in content.lower(), "HTML文件格式不正确，缺少body标签"
+    # 检查是否包含对象存储相关的关键词
+    keywords = ["对象存储", "storage", "backend", "服务", "集成"]
+    has_relevant_content = any(keyword in content for keyword in keywords)
+    assert has_relevant_content, "开发文档应包含对象存储服务相关内容"
+
+def test_main_module_structure():
+    """测试main.py模块的基本结构和功能"""
+    backend_dir = project_root / "backend"
+    main_file = backend_dir / "main.py"
     
-    def test_server_js_file_structure_and_auth_functions(self, project_root):
-        """测试server.js文件存在且包含用户认证相关的函数结构"""
-        server_file = project_root / "api" / "server.js"
-        
-        # 检查文件是否存在
-        assert server_file.exists(), f"server.js文件不存在: {server_file}"
-        
-        # 读取JavaScript内容
-        content = server_file.read_text(encoding='utf-8')
-        
-        # 检查是否包含Node.js服务器相关代码
-        server_keywords = ['express', 'app', 'listen', 'port', 'require']
-        found_server_keywords = [keyword for keyword in server_keywords if keyword in content]
-        assert len(found_server_keywords) >= 2, f"server.js文件缺少基本服务器结构，期望包含: {server_keywords}"
-        
-        # 检查是否包含用户认证相关的路由或函数
-        auth_functions = ['login', 'auth', 'user', 'password', 'token', 'session']
-        found_auth_functions = [func for func in auth_functions if func.lower() in content.lower()]
-        assert len(found_auth_functions) > 0, f"server.js文件中未找到用户认证相关功能，期望包含: {auth_functions}"
+    if main_file.exists():
+        # 临时添加backend目录到路径
+        sys.path.insert(0, str(backend_dir))
+        try:
+            import main
+            # 检查模块是否有基本的属性或函数
+            module_attrs = dir(main)
+            assert len(module_attrs) > 0, "main模块应该包含一些属性或函数"
+        except Exception as e:
+            pytest.fail(f"导入main模块时发生错误: {e}")
+        finally:
+            sys.path.remove(str(backend_dir))
+
+def test_project_directory_structure():
+    """测试项目目录结构是否正确"""
+    # 检查backend目录存在
+    backend_dir = project_root / "backend"
+    assert backend_dir.exists(), "backend目录应该存在"
+    assert backend_dir.is_dir(), "backend应该是一个目录"
     
-    def test_package_json_contains_required_dependencies(self, project_root):
-        """测试package.json文件存在且包含用户认证模块所需的依赖包"""
-        package_file = project_root / "api" / "package.json"
-        
-        # 检查文件是否存在
-        assert package_file.exists(), f"package.json文件不存在: {package_file}"
-        
-        # 解析JSON内容
-        content = package_file.read_text(encoding='utf-8')
-        package_data = json.loads(content)
-        
-        # 检查基本字段
-        required_fields = ['name', 'version']
-        for field in required_fields:
-            assert field in package_data, f"package.json缺少必要字段: {field}"
-        
-        # 检查是否包含认证相关的依赖包
-        dependencies = package_data.get('dependencies', {})
-        dev_dependencies = package_data.get('devDependencies', {})
-        all_dependencies = {**dependencies, **dev_dependencies}
-        
-        # 常见的用户认证相关依赖包
-        auth_packages = ['express', 'jsonwebtoken', 'bcrypt', 'passport', 'express-session', 'cors']
-        found_packages = [pkg for pkg in auth_packages if pkg in all_dependencies]
-        
-        assert len(found_packages) > 0, f"package.json中未找到用户认证相关依赖包，期望包含: {auth_packages}"
+    # 检查docs目录结构存在
+    docs_dir = project_root / "docs" / "d2c78b" / "e0ab1e"
+    assert docs_dir.exists(), "文档目录结构应该存在"
+    assert docs_dir.is_dir(), "docs/d2c78b/e0ab1e应该是一个目录"
+
+def test_file_permissions_and_readability():
+    """测试关键文件的权限和可读性"""
+    main_file = project_root / "backend" / "main.py"
+    docs_file = project_root / "docs" / "d2c78b" / "e0ab1e" / "dev-notes.md"
     
-    def test_env_example_file_contains_auth_config(self, project_root):
-        """测试.env.example文件存在且包含用户认证相关的配置项"""
-        env_file = project_root / "api" / ".env.example"
+    if main_file.exists():
+        assert os.access(main_file, os.R_OK), "main.py文件应该可读"
         
-        # 检查文件是否存在
-        assert env_file.exists(), f".env.example文件不存在: {env_file}"
-        
-        # 读取环境变量配置内容
-        content = env_file.read_text(encoding='utf-8')
-        
-        # 检查是否包含认证相关的环境变量
-        auth_env_vars = ['SECRET', 'JWT', 'TOKEN', 'AUTH', 'PASSWORD', 'DATABASE', 'PORT']
-        found_vars = []
-        
-        for var in auth_env_vars:
-            if var in content.upper():
-                found_vars.append(var)
-        
-        assert len(found_vars) > 0, f".env.example文件中未找到用户认证相关配置，期望包含: {auth_env_vars}"
-        
-        # 检查文件格式是否正确（KEY=VALUE格式）
-        lines = [line.strip() for line in content.split('\n') if line.strip() and not line.startswith('#')]
-        if lines:  # 如果有非注释行
-            assert any('=' in line for line in lines), ".env.example文件格式不正确，应使用KEY=VALUE格式"
-    
-    def test_documentation_file_exists_and_readable(self, project_root):
-        """测试开发文档文件存在且可读取，包含项目相关信息"""
-        doc_file = project_root / "api" / "docs" / "d2c78b" / "c9b476" / "dev-notes.md"
-        
-        # 检查文件是否存在
-        assert doc_file.exists(), f"开发文档文件不存在: {doc_file}"
-        
-        # 检查文件是否可读且不为空
-        content = doc_file.read_text(encoding='utf-8')
-        assert len(content.strip()) > 0, "开发文档文件为空"
-        
-        # 检查是否包含开发相关的关键词
-        dev_keywords = ['api', 'auth', 'user', 'login', 'development', 'todo', 'note']
-        found_keywords = [keyword for keyword in dev_keywords if keyword.lower() in content.lower()]
-        
-        assert len(found_keywords) > 0, f"开发文档中未找到相关内容，期望包含: {dev_keywords}"
+    if docs_file.exists():
+        assert os.access(docs_file, os.R_OK), "dev-notes.md文件应该可读"
