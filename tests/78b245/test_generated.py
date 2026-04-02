@@ -3,113 +3,84 @@ from pathlib import Path
 import re
 
 class TestSmartCanvasProject:
-    """智能画布节点连线功能测试类"""
     
-    def test_index_html_file_exists(self):
-        """测试主页HTML文件是否存在"""
-        index_file = Path("index.html")
-        assert index_file.exists(), "index.html文件不存在"
-        assert index_file.is_file(), "index.html不是有效文件"
+    def test_html_file_exists(self):
+        """测试HTML文件是否存在"""
+        html_file = Path("index.html")
+        assert html_file.exists(), "index.html文件不存在"
+        assert html_file.is_file(), "index.html不是一个有效的文件"
     
-    def test_index_html_contains_canvas_elements(self):
+    def test_html_contains_canvas_elements(self):
         """测试HTML文件是否包含画布相关的关键元素"""
-        index_file = Path("index.html")
-        assert index_file.exists(), "index.html文件不存在"
-        
-        content = index_file.read_text(encoding='utf-8')
-        
-        # 检查是否包含画布相关元素
-        canvas_keywords = [
-            'canvas',
-            'node',
-            'connection',
-            'line'
-        ]
-        
-        found_keywords = []
-        for keyword in canvas_keywords:
-            if keyword.lower() in content.lower():
-                found_keywords.append(keyword)
-        
-        assert len(found_keywords) >= 2, f"HTML文件缺少画布相关关键元素，只找到: {found_keywords}"
-    
-    def test_dev_notes_documentation_exists(self):
-        """测试开发文档是否存在并包含BUG修复相关内容"""
-        dev_notes_file = Path("docs/78b245/b1ca57/dev-notes.md")
-        assert dev_notes_file.exists(), "开发文档文件不存在"
-        assert dev_notes_file.is_file(), "dev-notes.md不是有效文件"
-        
-        content = dev_notes_file.read_text(encoding='utf-8')
-        
-        # 检查文档是否包含BUG修复相关内容
-        bug_keywords = [
-            'bug',
-            '修复',
-            '连线',
-            '节点',
-            '断开',
-            'fix'
-        ]
-        
-        found_keywords = []
-        for keyword in bug_keywords:
-            if keyword.lower() in content.lower():
-                found_keywords.append(keyword)
-        
-        assert len(found_keywords) >= 3, f"开发文档缺少BUG修复相关内容，只找到: {found_keywords}"
-    
-    def test_html_structure_validity(self):
-        """测试HTML文件结构的基本有效性"""
-        index_file = Path("index.html")
-        assert index_file.exists(), "index.html文件不存在"
-        
-        content = index_file.read_text(encoding='utf-8')
-        
-        # 检查基本HTML结构
-        assert '<html' in content.lower(), "缺少HTML标签"
-        assert '<head' in content.lower(), "缺少HEAD标签"
-        assert '<body' in content.lower(), "缺少BODY标签"
-        
-        # 检查HTML标签是否配对
-        html_open = content.lower().count('<html')
-        html_close = content.lower().count('</html>')
-        assert html_open == html_close, "HTML标签不配对"
-    
-    def test_project_file_structure(self):
-        """测试项目文件结构的完整性"""
-        required_files = [
-            Path("index.html"),
-            Path("docs/78b245/b1ca57/dev-notes.md")
-        ]
-        
-        missing_files = []
-        for file_path in required_files:
-            if not file_path.exists():
-                missing_files.append(str(file_path))
-        
-        assert len(missing_files) == 0, f"缺少必要文件: {missing_files}"
-    
-    def test_canvas_connection_bug_documentation(self):
-        """测试节点连线断开BUG的文档记录是否完整"""
-        dev_notes_file = Path("docs/78b245/b1ca57/dev-notes.md")
-        
-        if dev_notes_file.exists():
-            content = dev_notes_file.read_text(encoding='utf-8')
+        html_file = Path("index.html")
+        if html_file.exists():
+            content = html_file.read_text(encoding='utf-8')
             
-            # 检查是否记录了具体的BUG描述
-            connection_issues = [
-                '连线断开',
-                'connection',
-                'disconnect',
-                '节点连接',
-                'node connection'
+            # 检查是否包含canvas标签或相关容器
+            canvas_patterns = [
+                r'<canvas[^>]*>',
+                r'class=["\'][^"\']*canvas[^"\']*["\']',
+                r'id=["\'][^"\']*canvas[^"\']*["\']',
+                r'<div[^>]*canvas[^>]*>',
+                r'<svg[^>]*>'
             ]
             
-            found_issues = []
-            for issue in connection_issues:
-                if issue.lower() in content.lower():
-                    found_issues.append(issue)
+            has_canvas_element = any(re.search(pattern, content, re.IGNORECASE) 
+                                   for pattern in canvas_patterns)
+            assert has_canvas_element, "HTML文件中未找到画布相关元素"
+    
+    def test_html_contains_drag_functionality(self):
+        """测试HTML文件是否包含拖拽功能相关代码"""
+        html_file = Path("index.html")
+        if html_file.exists():
+            content = html_file.read_text(encoding='utf-8')
             
-            assert len(found_issues) >= 1, f"文档中未找到节点连线相关问题描述: {found_issues}"
-        else:
-            pytest.skip("开发文档文件不存在，跳过此测试")
+            # 检查拖拽相关的关键词
+            drag_patterns = [
+                r'draggable\s*=\s*["\']true["\']',
+                r'ondrag\w*\s*=',
+                r'addEventListener\s*\(\s*["\']drag',
+                r'drag\w*\s*:',
+                r'onmouse\w*\s*=',
+                r'addEventListener\s*\(\s*["\']mouse',
+                r'\.drag\w*\(',
+                r'dragstart|dragend|dragover|drop'
+            ]
+            
+            has_drag_functionality = any(re.search(pattern, content, re.IGNORECASE) 
+                                       for pattern in drag_patterns)
+            assert has_drag_functionality, "HTML文件中未找到拖拽功能相关代码"
+    
+    def test_dev_notes_file_exists(self):
+        """测试开发文档文件是否存在"""
+        docs_file = Path("docs/78b245/e4554c/dev-notes.md")
+        assert docs_file.exists(), "开发文档文件不存在"
+        assert docs_file.is_file(), "开发文档不是一个有效的文件"
+    
+    def test_dev_notes_contains_bug_info(self):
+        """测试开发文档是否包含BUG相关信息"""
+        docs_file = Path("docs/78b245/e4554c/dev-notes.md")
+        if docs_file.exists():
+            content = docs_file.read_text(encoding='utf-8')
+            
+            # 检查是否包含BUG相关描述
+            bug_keywords = ['bug', 'BUG', '问题', '错误', '拖拽', '连线', '节点', 'drag', 'node', 'connect']
+            has_bug_info = any(keyword in content for keyword in bug_keywords)
+            assert has_bug_info, "开发文档中未找到BUG相关信息"
+    
+    def test_project_structure_integrity(self):
+        """测试项目结构完整性"""
+        # 检查项目根目录结构
+        root_files = ['index.html']
+        for file_name in root_files:
+            file_path = Path(file_name)
+            assert file_path.exists(), f"项目根目录缺少必要文件: {file_name}"
+        
+        # 检查docs目录结构
+        docs_dir = Path("docs")
+        assert docs_dir.exists(), "docs目录不存在"
+        assert docs_dir.is_dir(), "docs不是一个有效的目录"
+        
+        # 检查具体的文档路径
+        dev_notes_path = Path("docs/78b245/e4554c/dev-notes.md")
+        assert dev_notes_path.exists(), "开发文档路径不完整"
