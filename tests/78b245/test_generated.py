@@ -1,103 +1,111 @@
 import pytest
 from pathlib import Path
-import re
+from bs4 import BeautifulSoup
+import os
 
-class TestFrontendFiles:
+class TestFrontendCollaboration:
     
-    def test_index_html_exists(self):
-        """测试 index.html 文件是否存在"""
-        index_path = Path("frontend/index.html")
-        assert index_path.exists(), f"index.html 文件不存在: {index_path}"
-        assert index_path.is_file(), f"index.html 不是一个文件: {index_path}"
+    def test_index_html_file_exists(self):
+        """测试前端主页文件是否存在"""
+        index_path = Path("frontend") / "index.html"
+        assert index_path.exists(), f"前端主页文件 {index_path} 不存在"
+        assert index_path.is_file(), f"{index_path} 不是一个有效的文件"
     
-    def test_index_html_contains_essential_elements(self):
-        """测试 index.html 文件包含必要的 HTML 元素"""
-        index_path = Path("frontend/index.html")
+    def test_index_html_contains_collaboration_elements(self):
+        """测试HTML文件是否包含实时协作相关的关键元素"""
+        index_path = Path("frontend") / "index.html"
         
         # 确保文件存在
         if not index_path.exists():
-            pytest.skip("index.html 文件不存在，跳过内容测试")
+            pytest.skip(f"HTML文件 {index_path} 不存在，跳过内容测试")
         
-        content = index_path.read_text(encoding='utf-8')
+        with open(index_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
         
-        # 检查基本 HTML 结构
-        assert re.search(r'<html[^>]*>', content, re.IGNORECASE), "缺少 <html> 标签"
-        assert re.search(r'<head[^>]*>', content, re.IGNORECASE), "缺少 <head> 标签"
-        assert re.search(r'<body[^>]*>', content, re.IGNORECASE), "缺少 <body> 标签"
+        soup = BeautifulSoup(html_content, 'html.parser')
         
-        # 检查性能优化相关元素
-        assert re.search(r'<title[^>]*>.*</title>', content, re.IGNORECASE), "缺少 <title> 标签"
+        # 检查基本HTML结构
+        assert soup.find('html'), "HTML文件缺少html标签"
+        assert soup.find('head'), "HTML文件缺少head标签"
+        assert soup.find('body'), "HTML文件缺少body标签"
         
-        # 检查是否包含性能优化相关的关键词
-        performance_keywords = ['性能', 'performance', '优化', 'optimization', '测试', 'test']
-        content_lower = content.lower()
-        has_performance_keyword = any(keyword.lower() in content_lower for keyword in performance_keywords)
-        assert has_performance_keyword, "HTML 内容应包含性能优化或测试相关的关键词"
-    
-    def test_dev_notes_markdown_exists_and_valid(self):
-        """测试开发文档 markdown 文件是否存在且格式正确"""
-        dev_notes_path = Path("docs/78b245/c604e2/dev-notes.md")
-        
-        assert dev_notes_path.exists(), f"开发文档不存在: {dev_notes_path}"
-        assert dev_notes_path.is_file(), f"开发文档不是一个文件: {dev_notes_path}"
-        
-        content = dev_notes_path.read_text(encoding='utf-8')
-        
-        # 检查文件不为空
-        assert len(content.strip()) > 0, "开发文档内容不能为空"
-        
-        # 检查是否包含 markdown 格式的标题
-        has_markdown_header = re.search(r'^#+\s+.+', content, re.MULTILINE)
-        assert has_markdown_header, "开发文档应包含 markdown 格式的标题"
-        
-        # 检查是否包含开发相关的关键词
-        dev_keywords = ['开发', '性能', '优化', '测试', 'dev', 'performance', 'optimization', 'test']
-        content_lower = content.lower()
-        has_dev_keyword = any(keyword.lower() in content_lower for keyword in dev_keywords)
-        assert has_dev_keyword, "开发文档应包含开发、性能或测试相关的内容"
-    
-    def test_frontend_directory_structure(self):
-        """测试前端目录结构的完整性"""
-        frontend_dir = Path("frontend")
-        docs_dir = Path("docs/78b245/c604e2")
-        
-        assert frontend_dir.exists(), "frontend 目录不存在"
-        assert frontend_dir.is_dir(), "frontend 不是一个目录"
-        
-        assert docs_dir.exists(), "docs 目录结构不完整"
-        assert docs_dir.is_dir(), "docs 路径不是一个目录"
-        
-        # 检查关键文件是否都存在
-        required_files = [
-            Path("frontend/index.html"),
-            Path("docs/78b245/c604e2/dev-notes.md")
+        # 检查实时协作相关元素（常见的协作功能元素）
+        collaboration_indicators = [
+            'websocket', 'socket', 'collaboration', 'realtime', 'real-time',
+            'collaborative', 'editor', 'chat', 'cursor', 'user', 'online'
         ]
         
-        for file_path in required_files:
-            assert file_path.exists(), f"必需的文件不存在: {file_path}"
+        html_lower = html_content.lower()
+        found_indicators = [indicator for indicator in collaboration_indicators if indicator in html_lower]
+        
+        assert len(found_indicators) > 0, f"HTML文件中未找到实时协作相关关键词，检查的关键词: {collaboration_indicators}"
     
-    def test_html_performance_optimization_hints(self):
-        """测试 HTML 文件是否包含性能优化相关的标签或属性"""
-        index_path = Path("frontend/index.html")
+    def test_dev_notes_documentation_exists(self):
+        """测试开发文档是否存在并包含有效内容"""
+        docs_path = Path("docs") / "78b245" / "98354d" / "dev-notes.md"
+        
+        assert docs_path.exists(), f"开发文档 {docs_path} 不存在"
+        assert docs_path.is_file(), f"{docs_path} 不是一个有效的文件"
+        
+        with open(docs_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # 检查文档不为空
+        assert len(content.strip()) > 0, "开发文档内容为空"
+        
+        # 检查是否包含开发相关关键词
+        dev_keywords = ['开发', 'development', 'api', 'function', '功能', '实现', 'implementation']
+        content_lower = content.lower()
+        found_keywords = [keyword for keyword in dev_keywords if keyword in content_lower]
+        
+        assert len(found_keywords) > 0, f"开发文档中未找到开发相关关键词，检查的关键词: {dev_keywords}"
+    
+    def test_html_has_valid_structure_for_collaboration(self):
+        """测试HTML文件是否具有支持实时协作的有效结构"""
+        index_path = Path("frontend") / "index.html"
         
         if not index_path.exists():
-            pytest.skip("index.html 文件不存在，跳过性能优化测试")
+            pytest.skip(f"HTML文件 {index_path} 不存在，跳过结构测试")
         
-        content = index_path.read_text(encoding='utf-8')
+        with open(index_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
         
-        # 检查性能优化相关的 HTML 特性
-        performance_indicators = [
-            r'<meta[^>]*viewport[^>]*>',  # 响应式设计
-            r'<link[^>]*rel=["\']stylesheet["\'][^>]*>',  # CSS 链接
-            r'<script[^>]*>',  # JavaScript
-            r'defer|async',  # 异步加载
-            r'preload|prefetch',  # 资源预加载
-        ]
+        soup = BeautifulSoup(html_content, 'html.parser')
         
-        found_indicators = []
-        for indicator in performance_indicators:
-            if re.search(indicator, content, re.IGNORECASE):
-                found_indicators.append(indicator)
+        # 检查是否有JavaScript引用（实时协作通常需要JS）
+        scripts = soup.find_all('script')
+        assert len(scripts) > 0 or 'script' in html_content.lower(), "HTML文件中未找到JavaScript引用，实时协作功能可能无法正常工作"
         
-        # 至少应该包含一些基本的 HTML 结构元素
-        assert len(found_indicators) > 0, "HTML 文件应包含一些基本的性能优化元素（如 meta 标签、CSS 或 JS 引用等）"
+        # 检查是否有容器元素（用于显示协作内容）
+        container_elements = soup.find_all(['div', 'section', 'main', 'article'])
+        assert len(container_elements) > 0, "HTML文件中未找到容器元素，缺少显示协作内容的区域"
+        
+        # 检查是否有表单或输入元素（协作通常需要用户输入）
+        interactive_elements = soup.find_all(['input', 'textarea', 'button', 'form'])
+        has_interactive = len(interactive_elements) > 0
+        
+        # 如果没有交互元素，至少应该有用于动态添加内容的容器
+        if not has_interactive:
+            divs_with_id = soup.find_all('div', id=True)
+            divs_with_class = soup.find_all('div', class_=True)
+            assert len(divs_with_id) > 0 or len(divs_with_class) > 0, "HTML文件缺少交互元素和可标识的容器，无法支持动态协作功能"
+    
+    def test_project_structure_completeness(self):
+        """测试项目结构的完整性"""
+        frontend_dir = Path("frontend")
+        docs_dir = Path("docs")
+        
+        # 检查主要目录存在
+        assert frontend_dir.exists(), "frontend目录不存在"
+        
+        # 检查核心文件存在
+        index_file = frontend_dir / "index.html"
+        dev_notes_file = docs_dir / "78b245" / "98354d" / "dev-notes.md"
+        
+        missing_files = []
+        if not index_file.exists():
+            missing_files.append(str(index_file))
+        if not dev_notes_file.exists():
+            missing_files.append(str(dev_notes_file))
+        
+        assert len(missing_files) == 0, f"以下核心文件缺失: {missing_files}"
