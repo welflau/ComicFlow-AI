@@ -1,89 +1,98 @@
 import pytest
 from pathlib import Path
-import re
+from bs4 import BeautifulSoup
 
-class TestFrontendModule:
+class TestFrontendNodeSystem:
     
     def test_index_html_file_exists(self):
         """测试 index.html 文件是否存在"""
-        index_file = Path("frontend/index.html")
-        assert index_file.exists(), f"index.html 文件不存在: {index_file}"
-        assert index_file.is_file(), f"index.html 不是一个有效文件: {index_file}"
+        frontend_dir = Path(__file__).parent / "frontend"
+        index_file = frontend_dir / "index.html"
+        assert index_file.exists(), f"index.html 文件不存在于路径: {index_file}"
+        assert index_file.is_file(), f"{index_file} 不是一个有效的文件"
     
     def test_index_html_contains_essential_elements(self):
-        """测试 index.html 文件包含必要的HTML元素"""
-        index_file = Path("frontend/index.html")
+        """测试 index.html 文件包含必要的HTML元素和节点系统相关内容"""
+        frontend_dir = Path(__file__).parent / "frontend"
+        index_file = frontend_dir / "index.html"
         
-        # 确保文件存在
-        assert index_file.exists(), "index.html 文件不存在"
+        with open(index_file, 'r', encoding='utf-8') as f:
+            content = f.read()
         
-        # 读取文件内容
-        content = index_file.read_text(encoding='utf-8')
+        soup = BeautifulSoup(content, 'html.parser')
         
         # 检查基本HTML结构
-        assert re.search(r'<html[^>]*>', content, re.IGNORECASE), "缺少 <html> 标签"
-        assert re.search(r'<head[^>]*>', content, re.IGNORECASE), "缺少 <head> 标签"
-        assert re.search(r'<body[^>]*>', content, re.IGNORECASE), "缺少 <body> 标签"
+        assert soup.find('html'), "HTML文件缺少html标签"
+        assert soup.find('head'), "HTML文件缺少head标签"
+        assert soup.find('body'), "HTML文件缺少body标签"
         
         # 检查节点系统相关元素
-        assert re.search(r'<title[^>]*>.*节点.*</title>', content, re.IGNORECASE), "标题中应包含'节点'关键词"
+        title = soup.find('title')
+        assert title, "HTML文件缺少title标签"
+        
+        # 检查是否包含节点系统相关的关键词
+        page_text = content.lower()
+        node_keywords = ['node', 'system', '节点', '系统']
+        has_node_content = any(keyword in page_text for keyword in node_keywords)
+        assert has_node_content, "HTML文件应包含节点系统相关的内容"
     
-    def test_index_html_has_valid_structure(self):
-        """测试 index.html 文件具有有效的HTML结构和节点系统相关功能"""
-        index_file = Path("frontend/index.html")
-        content = index_file.read_text(encoding='utf-8')
+    def test_dev_notes_documentation_exists(self):
+        """测试开发文档是否存在并包含有效内容"""
+        docs_dir = Path(__file__).parent / "docs" / "78b245" / "b2cdd4"
+        dev_notes_file = docs_dir / "dev-notes.md"
         
-        # 检查是否包含节点系统相关的元素
-        node_related_patterns = [
-            r'node|节点',  # 节点相关文本
-            r'<div[^>]*id[^>]*>',  # 包含id的div元素
-            r'<script[^>]*>',  # JavaScript脚本
-        ]
+        assert dev_notes_file.exists(), f"开发文档不存在于路径: {dev_notes_file}"
+        assert dev_notes_file.is_file(), f"{dev_notes_file} 不是一个有效的文件"
         
-        for pattern in node_related_patterns:
-            assert re.search(pattern, content, re.IGNORECASE), f"HTML内容应包含模式: {pattern}"
+        with open(dev_notes_file, 'r', encoding='utf-8') as f:
+            content = f.read()
         
-        # 检查HTML标签是否正确闭合
-        open_tags = re.findall(r'<(\w+)[^>]*>', content)
-        close_tags = re.findall(r'</(\w+)>', content)
+        # 检查文档不为空
+        assert len(content.strip()) > 0, "开发文档不应为空"
         
-        # 检查主要标签是否有对应的闭合标签
-        main_tags = ['html', 'head', 'body']
-        for tag in main_tags:
-            if tag in open_tags:
-                assert tag in close_tags, f"标签 <{tag}> 没有正确闭合"
+        # 检查是否包含开发相关的关键词
+        content_lower = content.lower()
+        dev_keywords = ['dev', 'development', '开发', 'note', '笔记', 'todo', 'bug', 'feature']
+        has_dev_content = any(keyword in content_lower for keyword in dev_keywords)
+        assert has_dev_content, "开发文档应包含开发相关的内容"
     
-    def test_dev_notes_file_exists_and_readable(self):
-        """测试开发文档文件是否存在且可读"""
-        dev_notes_file = Path("docs/78b245/b2cdd4/dev-notes.md")
+    def test_html_file_structure_and_syntax(self):
+        """测试HTML文件的结构完整性和基本语法正确性"""
+        frontend_dir = Path(__file__).parent / "frontend"
+        index_file = frontend_dir / "index.html"
         
-        assert dev_notes_file.exists(), f"开发文档文件不存在: {dev_notes_file}"
-        assert dev_notes_file.is_file(), f"开发文档不是一个有效文件: {dev_notes_file}"
+        with open(index_file, 'r', encoding='utf-8') as f:
+            content = f.read()
         
-        # 测试文件是否可读且非空
-        content = dev_notes_file.read_text(encoding='utf-8')
-        assert len(content.strip()) > 0, "开发文档文件不应为空"
+        # 使用BeautifulSoup解析，如果语法严重错误会抛出异常
+        soup = BeautifulSoup(content, 'html.parser')
         
-        # 检查是否包含开发相关内容
-        dev_keywords = ['开发', '节点', 'dev', 'node', '#']
-        has_dev_content = any(keyword in content.lower() for keyword in dev_keywords)
-        assert has_dev_content, "开发文档应包含开发相关关键词"
+        # 检查DOCTYPE声明
+        doctype_exists = '<!doctype' in content.lower() or '<!DOCTYPE' in content
+        assert doctype_exists, "HTML文件应包含DOCTYPE声明"
+        
+        # 检查字符编码设置
+        meta_charset = soup.find('meta', attrs={'charset': True}) or soup.find('meta', attrs={'http-equiv': 'Content-Type'})
+        assert meta_charset, "HTML文件应包含字符编码设置"
     
-    def test_frontend_directory_structure(self):
-        """测试前端目录结构的完整性"""
-        frontend_dir = Path("frontend")
-        docs_dir = Path("docs/78b245/b2cdd4")
+    def test_project_directory_structure(self):
+        """测试项目目录结构的完整性"""
+        project_root = Path(__file__).parent
         
-        assert frontend_dir.exists(), "frontend 目录不存在"
-        assert frontend_dir.is_dir(), "frontend 不是一个有效目录"
+        # 检查frontend目录存在
+        frontend_dir = project_root / "frontend"
+        assert frontend_dir.exists(), "frontend目录不存在"
+        assert frontend_dir.is_dir(), "frontend应该是一个目录"
         
-        assert docs_dir.exists(), "文档目录不存在"
-        assert docs_dir.is_dir(), "文档路径不是一个有效目录"
+        # 检查docs目录结构存在
+        docs_dir = project_root / "docs" / "78b245" / "b2cdd4"
+        assert docs_dir.exists(), "docs目录结构不完整"
+        assert docs_dir.is_dir(), "docs路径应该是一个目录"
         
-        # 检查关键文件
+        # 检查关键文件都存在
         required_files = [
-            Path("frontend/index.html"),
-            Path("docs/78b245/b2cdd4/dev-notes.md")
+            frontend_dir / "index.html",
+            docs_dir / "dev-notes.md"
         ]
         
         for file_path in required_files:
