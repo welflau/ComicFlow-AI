@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js无限画布系统</title>
-    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+    <title>工作流画布系统</title>
+    <script src="https://unpkg.com/vue@3.3.8/dist/vue.global.js"></script>
     <style>
         * {
             margin: 0;
@@ -14,845 +14,735 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1a1a1a;
-            overflow: hidden;
-            user-select: none;
-        }
-
-        .canvas-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            cursor: grab;
-        }
-
-        .canvas-container.dragging {
-            cursor: grabbing;
-        }
-
-        .ui-overlay {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 1000;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 14px;
-            backdrop-filter: blur(10px);
-        }
-
-        .controls {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            gap: 10px;
+            align-items: center;
+            justify-content: center;
         }
 
-        .control-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        .app-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .auth-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .dashboard-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            min-height: 500px;
+        }
+
+        .auth-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .auth-header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .auth-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .auth-form {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
         }
 
-        .control-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
+        .btn:hover {
             transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
         }
 
-        .performance-stats {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            z-index: 1000;
-            background: rgba(0, 0, 0, 0.8);
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .success-message {
+            color: #27ae60;
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .toggle-form {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e1e5e9;
+        }
+
+        .toggle-form a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .toggle-form a:hover {
+            text-decoration: underline;
+        }
+
+        /* 数据库管理界面样式 */
+        .db-management {
+            width: 100%;
+            height: 100vh;
+            background: #f5f7fa;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .db-header {
+            background: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .db-header h1 {
+            color: #333;
+            font-size: 24px;
+        }
+
+        .logout-btn {
+            padding: 8px 16px;
+            background: #e74c3c;
             color: white;
-            padding: 10px;
-            border-radius: 8px;
-            font-family: monospace;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .db-content {
+            flex: 1;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .db-sidebar {
+            width: 250px;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+        }
+
+        .db-main {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .model-list {
+            list-style: none;
+        }
+
+        .model-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .model-item:hover {
+            background: #e9ecef;
+        }
+
+        .model-item.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .model-details {
+            margin-bottom: 30px;
+        }
+
+        .model-details h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .schema-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .schema-table th,
+        .schema-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .schema-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .data-type {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 8px;
+            border-radius: 4px;
             font-size: 12px;
+            font-weight: 500;
         }
 
-        .loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 18px;
-            z-index: 2000;
+        .required {
+            color: #e74c3c;
+            font-weight: bold;
         }
 
-        .grid-info {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-            background: rgba(0, 0, 0, 0.8);
+        .api-section {
+            margin-top: 30px;
+        }
+
+        .api-section h4 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .api-list {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .api-item {
+            margin-bottom: 8px;
+            font-family: 'Courier New', monospace;
+            color: #495057;
+        }
+
+        .method {
+            background: #28a745;
             color: white;
-            padding: 10px;
-            border-radius: 8px;
+            padding: 2px 6px;
+            border-radius: 3px;
             font-size: 12px;
+            margin-right: 8px;
+        }
+
+        .method.post {
+            background: #007bff;
+        }
+
+        .method.put {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .method.delete {
+            background: #dc3545;
+        }
+
+        .sql-preview {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        .sql-keyword {
+            color: #63b3ed;
+            font-weight: bold;
+        }
+
+        .sql-string {
+            color: #68d391;
+        }
+
+        .sql-comment {
+            color: #a0aec0;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
-    <div class="canvas-container" id="canvasContainer">
-        <div class="loading" id="loading">初始化画布...</div>
-        
-        <div class="ui-overlay" id="uiOverlay">
-            <div><strong>Three.js 无限画布</strong></div>
-            <div>缩放: <span id="zoomLevel">1.0</span>x</div>
-            <div>位置: (<span id="posX">0</span>, <span id="posY">0</span>)</div>
-            <div>对象数量: <span id="objectCount">0</span></div>
+    <div id="app">
+        <!-- 登录/注册界面 -->
+        <div v-if="!isLoggedIn" class="app-container">
+            <div class="auth-container">
+                <div class="auth-header">
+                    <h1>{{ isLogin ? '登录' : '注册' }}</h1>
+                    <p>{{ isLogin ? '欢迎回来，请登录您的账户' : '创建新账户开始使用' }}</p>
+                </div>
+                <form @submit.prevent="handleSubmit" class="auth-form">
+                    <div v-if="!isLogin" class="form-group">
+                        <label for="username">用户名</label>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            v-model="form.username" 
+                            required
+                            placeholder="请输入用户名"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="email">邮箱</label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            v-model="form.email" 
+                            required
+                            placeholder="请输入邮箱地址"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="password">密码</label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            v-model="form.password" 
+                            required
+                            placeholder="请输入密码"
+                        >
+                    </div>
+                    <div v-if="!isLogin" class="form-group">
+                        <label for="confirmPassword">确认密码</label>
+                        <input 
+                            type="password" 
+                            id="confirmPassword" 
+                            v-model="form.confirmPassword" 
+                            required
+                            placeholder="请再次输入密码"
+                        >
+                    </div>
+                    <button type="submit" class="btn" :disabled="loading">
+                        {{ loading ? '处理中...' : (isLogin ? '登录' : '注册') }}
+                    </button>
+                    <div v-if="error" class="error-message">{{ error }}</div>
+                    <div v-if="success" class="success-message">{{ success }}</div>
+                    <div class="toggle-form">
+                        <span>{{ isLogin ? '还没有账户？' : '已有账户？' }}</span>
+                        <a href="#" @click.prevent="toggleForm">
+                            {{ isLogin ? '立即注册' : '立即登录' }}
+                        </a>
+                    </div>
+                </form>
+            </div>
         </div>
 
-        <div class="controls">
-            <button class="control-btn" id="resetView">重置视图</button>
-            <button class="control-btn" id="addObjects">添加对象</button>
-            <button class="control-btn" id="toggleGrid">切换网格</button>
-            <button class="control-btn" id="togglePerf">性能监控</button>
-        </div>
+        <!-- 数据库管理界面 -->
+        <div v-if="isLoggedIn" class="db-management">
+            <div class="db-header">
+                <h1>工作流画布数据库设计</h1>
+                <button @click="logout" class="logout-btn">退出登录</button>
+            </div>
+            <div class="db-content">
+                <div class="db-sidebar">
+                    <h3>数据模型</h3>
+                    <ul class="model-list">
+                        <li 
+                            v-for="model in dataModels" 
+                            :key="model.name"
+                            :class="['model-item', { active: selectedModel === model.name }]"
+                            @click="selectModel(model.name)"
+                        >
+                            {{ model.displayName }}
+                        </li>
+                    </ul>
+                </div>
+                <div class="db-main">
+                    <div v-if="selectedModel" class="model-details">
+                        <h3>{{ getCurrentModel().displayName }}</h3>
+                        <p><strong>描述：</strong>{{ getCurrentModel().description }}</p>
+                        
+                        <h4>数据结构</h4>
+                        <table class="schema-table">
+                            <thead>
+                                <tr>
+                                    <th>字段名</th>
+                                    <th>数据类型</th>
+                                    <th>是否必需</th>
+                                    <th>描述</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="field in getCurrentModel().schema" :key="field.name">
+                                    <td>{{ field.name }}</td>
+                                    <td><span class="data-type">{{ field.type }}</span></td>
+                                    <td><span :class="{ required: field.required }">{{ field.required ? '是' : '否' }}</span></td>
+                                    <td>{{ field.description }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
 
-        <div class="performance-stats" id="perfStats" style="display: none;">
-            <div>FPS: <span id="fps">0</span></div>
-            <div>渲染时间: <span id="renderTime">0</span>ms</div>
-            <div>可见对象: <span id="visibleObjects">0</span></div>
-            <div>内存使用: <span id="memoryUsage">0</span>MB</div>
-        </div>
+                        <div class="api-section">
+                            <h4>API 接口</h4>
+                            <div class="api-list">
+                                <div v-for="api in getCurrentModel().apis" :key="api.name" class="api-item">
+                                    <span :class="['method', api.method.toLowerCase()]">{{ api.method }}</span>
+                                    <strong>{{ api.name }}</strong> - {{ api.description }}
+                                </div>
+                            </div>
+                        </div>
 
-        <div class="grid-info" id="gridInfo">
-            <div>网格单位: <span id="gridUnit">10</span></div>
-            <div>视野范围: <span id="viewBounds">0</span></div>
+                        <div class="sql-preview">
+                            <div class="sql-comment">-- {{ getCurrentModel().displayName }} 表结构</div>
+                            <pre>{{ generateSQL(getCurrentModel()) }}</pre>
+                        </div>
+                    </div>
+                    <div v-else>
+                        <h3>请选择一个数据模型查看详情</h3>
+                        <p>从左侧列表中选择一个数据模型来查看其结构、API接口和SQL定义。</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        // CanvasEngine - Three.js画布核心引擎
-        class CanvasEngine {
-            constructor(container) {
-                this.container = container;
-                this.scene = null;
-                this.camera = null;
-                this.renderer = null;
-                this.isInitialized = false;
-                this.objects = [];
-                this.gridHelper = null;
-            }
+        const { createApp } = Vue;
 
-            init() {
-                try {
-                    // 创建场景
-                    this.scene = new THREE.Scene();
-                    this.scene.background = new THREE.Color(0x0a0a0a);
-
-                    // 创建相机
-                    this.camera = new THREE.OrthographicCamera(
-                        -window.innerWidth / 2,
-                        window.innerWidth / 2,
-                        window.innerHeight / 2,
-                        -window.innerHeight / 2,
-                        0.1,
-                        1000
-                    );
-                    this.camera.position.z = 100;
-
-                    // 创建渲染器
-                    this.renderer = new THREE.WebGLRenderer({ 
-                        antialias: true,
-                        alpha: true,
-                        powerPreference: "high-performance"
-                    });
-                    this.renderer.setSize(window.innerWidth, window.innerHeight);
-                    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-                    this.renderer.shadowMap.enabled = true;
-                    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-                    
-                    this.container.appendChild(this.renderer.domElement);
-
-                    // 创建网格
-                    this.createGrid();
-
-                    // 添加一些初始对象
-                    this.addInitialObjects();
-
-                    this.isInitialized = true;
-                    console.log('CanvasEngine initialized successfully');
-                    return true;
-                } catch (error) {
-                    console.error('Failed to initialize CanvasEngine:', error);
-                    return false;
-                }
-            }
-
-            createGrid() {
-                const size = 10000;
-                const divisions = 1000;
-                this.gridHelper = new THREE.GridHelper(size, divisions, 0x404040, 0x202020);
-                this.gridHelper.rotation.x = Math.PI / 2;
-                this.scene.add(this.gridHelper);
-            }
-
-            addInitialObjects() {
-                // 添加一些随机的几何体
-                const geometries = [
-                    new THREE.BoxGeometry(50, 50, 50),
-                    new THREE.SphereGeometry(30, 32, 32),
-                    new THREE.ConeGeometry(25, 60, 8),
-                    new THREE.CylinderGeometry(20, 20, 50, 16)
-                ];
-
-                const materials = [
-                    new THREE.MeshLambertMaterial({ color: 0xff6b6b }),
-                    new THREE.MeshLambertMaterial({ color: 0x4ecdc4 }),
-                    new THREE.MeshLambertMaterial({ color: 0x45b7d1 }),
-                    new THREE.MeshLambertMaterial({ color: 0xf9ca24 }),
-                    new THREE.MeshLambertMaterial({ color: 0xf0932b }),
-                    new THREE.MeshLambertMaterial({ color: 0xeb4d4b }),
-                    new THREE.MeshLambertMaterial({ color: 0x6c5ce7 })
-                ];
-
-                // 添加环境光
-                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
-                this.scene.add(ambientLight);
-
-                // 添加方向光
-                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-                directionalLight.position.set(100, 100, 50);
-                directionalLight.castShadow = true;
-                this.scene.add(directionalLight);
-
-                // 创建随机对象
-                for (let i = 0; i < 50; i++) {
-                    const geometry = geometries[Math.floor(Math.random() * geometries.length)];
-                    const material = materials[Math.floor(Math.random() * materials.length)];
-                    const mesh = new THREE.Mesh(geometry, material);
-                    
-                    mesh.position.set(
-                        (Math.random() - 0.5) * 2000,
-                        (Math.random() - 0.5) * 2000,
-                        0
-                    );
-                    
-                    mesh.rotation.set(
-                        Math.random() * Math.PI,
-                        Math.random() * Math.PI,
-                        Math.random() * Math.PI
-                    );
-                    
-                    mesh.castShadow = true;
-                    mesh.receiveShadow = true;
-                    
-                    this.scene.add(mesh);
-                    this.objects.push(mesh);
-                }
-            }
-
-            addRandomObjects(count = 10) {
-                const geometries = [
-                    new THREE.BoxGeometry(30, 30, 30),
-                    new THREE.SphereGeometry(20, 16, 16),
-                    new THREE.ConeGeometry(15, 40, 6)
-                ];
-
-                const materials = [
-                    new THREE.MeshLambertMaterial({ color: Math.random() * 0xffffff }),
-                    new THREE.MeshLambertMaterial({ color: Math.random() * 0xffffff }),
-                    new THREE.MeshLambertMaterial({ color: Math.random() * 0xffffff })
-                ];
-
-                for (let i = 0; i < count; i++) {
-                    const geometry = geometries[Math.floor(Math.random() * geometries.length)];
-                    const material = materials[Math.floor(Math.random() * materials.length)];
-                    const mesh = new THREE.Mesh(geometry, material);
-                    
-                    mesh.position.set(
-                        (Math.random() - 0.5) * 3000,
-                        (Math.random() - 0.5) * 3000,
-                        0
-                    );
-                    
-                    this.scene.add(mesh);
-                    this.objects.push(mesh);
-                }
-            }
-
-            render() {
-                if (!this.isInitialized) return;
-                
-                // 旋转对象
-                this.objects.forEach(obj => {
-                    obj.rotation.x += 0.005;
-                    obj.rotation.y += 0.005;
-                });
-
-                this.renderer.render(this.scene, this.camera);
-            }
-
-            resize() {
-                if (!this.isInitialized) return;
-                
-                const width = window.innerWidth;
-                const height = window.innerHeight;
-                
-                this.camera.left = -width / 2;
-                this.camera.right = width / 2;
-                this.camera.top = height / 2;
-                this.camera.bottom = -height / 2;
-                this.camera.updateProjectionMatrix();
-                
-                this.renderer.setSize(width, height);
-            }
-
-            dispose() {
-                if (this.renderer) {
-                    this.renderer.dispose();
-                }
-                if (this.scene) {
-                    this.scene.clear();
-                }
-            }
-
-            toggleGrid() {
-                if (this.gridHelper) {
-                    this.gridHelper.visible = !this.gridHelper.visible;
-                }
-            }
-
-            getObjectCount() {
-                return this.objects.length;
-            }
-        }
-
-        // CameraController - 相机控制器
-        class CameraController {
-            constructor(camera) {
-                this.camera = camera;
-                this.minZoom = 0.1;
-                this.maxZoom = 10;
-                this.zoomSpeed = 0.1;
-                this.panSpeed = 1;
-                this.bounds = {
-                    minX: -5000,
-                    maxX: 5000,
-                    minY: -5000,
-                    maxY: 5000
-                };
-            }
-
-            zoom(delta) {
-                const zoomFactor = 1 + delta * this.zoomSpeed;
-                const newZoom = this.camera.zoom * zoomFactor;
-                
-                if (newZoom >= this.minZoom && newZoom <= this.maxZoom) {
-                    this.camera.zoom = newZoom;
-                    this.camera.updateProjectionMatrix();
-                }
-                
-                return this.camera.zoom;
-            }
-
-            pan(deltaX, deltaY) {
-                const panX = deltaX * this.panSpeed / this.camera.zoom;
-                const panY = deltaY * this.panSpeed / this.camera.zoom;
-                
-                const newX = this.camera.position.x - panX;
-                const newY = this.camera.position.y + panY;
-                
-                // 应用边界限制
-                this.camera.position.x = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, newX));
-                this.camera.position.y = Math.max(this.bounds.minY, Math.min(this.bounds.maxY, newY));
-            }
-
-            setPosition(x, y, z) {
-                this.camera.position.set(x, y, z || this.camera.position.z);
-            }
-
-            getBounds() {
-                return this.bounds;
-            }
-
-            reset() {
-                this.camera.position.set(0, 0, 100);
-                this.camera.zoom = 1;
-                this.camera.updateProjectionMatrix();
-            }
-
-            getZoom() {
-                return this.camera.zoom;
-            }
-
-            getPosition() {
+        createApp({
+            data() {
                 return {
-                    x: Math.round(this.camera.position.x),
-                    y: Math.round(this.camera.position.y)
-                };
-            }
-        }
-
-        // InteractionManager - 交互事件管理
-        class InteractionManager {
-            constructor(container, cameraController) {
-                this.container = container;
-                this.cameraController = cameraController;
-                this.isMouseDown = false;
-                this.lastMousePos = { x: 0, y: 0 };
-                this.isDragging = false;
-                this.touchStartDistance = 0;
-                this.lastTouchZoom = 1;
-            }
-
-            bindEvents() {
-                // 鼠标事件
-                this.container.addEventListener('mousedown', this.onMouseDown.bind(this));
-                this.container.addEventListener('mousemove', this.onMouseMove.bind(this));
-                this.container.addEventListener('mouseup', this.onMouseUp.bind(this));
-                this.container.addEventListener('wheel', this.onWheel.bind(this));
-                
-                // 触摸事件
-                this.container.addEventListener('touchstart', this.onTouchStart.bind(this));
-                this.container.addEventListener('touchmove', this.onTouchMove.bind(this));
-                this.container.addEventListener('touchend', this.onTouchEnd.bind(this));
-                
-                // 防止右键菜单
-                this.container.addEventListener('contextmenu', (e) => e.preventDefault());
-                
-                // 键盘事件
-                document.addEventListener('keydown', this.onKeyDown.bind(this));
-            }
-
-            onMouseDown(event) {
-                this.isMouseDown = true;
-                this.lastMousePos = { x: event.clientX, y: event.clientY };
-                this.container.classList.add('dragging');
-            }
-
-            onMouseMove(event) {
-                if (!this.isMouseDown) return;
-                
-                const deltaX = event.clientX - this.lastMousePos.x;
-                const deltaY = event.clientY - this.lastMousePos.y;
-                
-                this.cameraController.pan(deltaX, deltaY);
-                
-                this.lastMousePos = { x: event.clientX, y: event.clientY };
-                this.isDragging = true;
-            }
-
-            onMouseUp(event) {
-                this.isMouseDown = false;
-                this.isDragging = false;
-                this.container.classList.remove('dragging');
-            }
-
-            onWheel(event) {
-                event.preventDefault();
-                const delta = event.deltaY > 0 ? -0.1 : 0.1;
-                this.cameraController.zoom(delta);
-            }
-
-            onTouchStart(event) {
-                if (event.touches.length === 1) {
-                    this.lastMousePos = {
-                        x: event.touches[0].clientX,
-                        y: event.touches[0].clientY
+                    isLoggedIn: false,
+                    isLogin: true,
+                    loading: false,
+                    error: '',
+                    success: '',
+                    selectedModel: 'canvas',
+                    form: {
+                        username: '',
+                        email: '',
+                        password: '',
+                        confirmPassword: ''
+                    },
+                    dataModels: [
+                        {
+                            name: 'canvas',
+                            displayName: 'Canvas Model',
+                            description: '画布数据模型，存储画布基本信息、视图状态和元数据',
+                            schema: [
+                                { name: 'id', type: 'ObjectId', required: true, description: '画布唯一标识' },
+                                { name: 'name', type: 'String', required: true, description: '画布名称' },
+                                { name: 'description', type: 'String', required: false, description: '画布描述' },
+                                { name: 'ownerId', type: 'ObjectId', required: true, description: '创建者ID' },
+                                { name: 'viewState', type: 'Object', required: false, description: '视图状态（缩放、平移等）' },
+                                { name: 'metadata', type: 'Object', required: false, description: '元数据信息' },
+                                { name: 'isPublic', type: 'Boolean', required: false, description: '是否公开' },
+                                { name: 'tags', type: 'Array', required: false, description: '标签列表' },
+                                { name: 'createdAt', type: 'Date', required: true, description: '创建时间' },
+                                { name: 'updatedAt', type: 'Date', required: true, description: '更新时间' }
+                            ],
+                            apis: [
+                                { name: 'createCanvas(canvasData)', method: 'POST', description: '创建新画布' },
+                                { name: 'updateCanvas(canvasId, updates)', method: 'PUT', description: '更新画布信息' },
+                                { name: 'getCanvas(canvasId)', method: 'GET', description: '获取画布详情' },
+                                { name: 'deleteCanvas(canvasId)', method: 'DELETE', description: '删除画布' },
+                                { name: 'getCanvasByUser(userId)', method: 'GET', description: '获取用户的画布列表' }
+                            ]
+                        },
+                        {
+                            name: 'node',
+                            displayName: 'Node Model',
+                            description: '节点数据模型，存储节点类型、位置、配置和状态信息',
+                            schema: [
+                                { name: 'id', type: 'ObjectId', required: true, description: '节点唯一标识' },
+                                { name: 'canvasId', type: 'ObjectId', required: true, description: '所属画布ID' },
+                                { name: 'type', type: 'String', required: true, description: '节点类型' },
+                                { name: 'name', type: 'String', required: true, description: '节点名称' },
+                                { name: 'position', type: 'Object', required: true, description: '节点位置坐标 {x, y}' },
+                                { name: 'size', type: 'Object', required: false, description: '节点尺寸 {width, height}' },
+                                { name: 'config', type: 'Object', required: false, description: '节点配置参数' },
+                                { name: 'status', type: 'String', required: false, description: '节点状态' },
+                                { name: 'inputPorts', type: 'Array', required: false, description: '输入端口配置' },
+                                { name: 'outputPorts', type: 'Array', required: false, description: '输出端口配置' },
+                                { name: 'createdAt', type: 'Date', required: true, description: '创建时间' },
+                                { name: 'updatedAt', type: 'Date', required: true, description: '更新时间' }
+                            ],
+                            apis: [
+                                { name: 'createNode(nodeData)', method: 'POST', description: '创建新节点' },
+                                { name: 'updateNode(nodeId, updates)', method: 'PUT', description: '更新节点信息' },
+                                { name: 'getNode(nodeId)', method: 'GET', description: '获取节点详情' },
+                                { name: 'deleteNode(nodeId)', method: 'DELETE', description: '删除节点' },
+                                { name: 'getNodesByCanvas(canvasId)', method: 'GET', description: '获取画布的所有节点' }
+                            ]
+                        },
+                        {
+                            name: 'connection',
+                            displayName: 'Connection Model',
+                            description: '连线数据模型，存储节点间的连接关系和数据流配置',
+                            schema: [
+                                { name: 'id', type: 'ObjectId', required: true, description: '连线唯一标识' },
+                                { name: 'canvasId', type: 'ObjectId', required: true, description: '所属画布ID' },
+                                { name: 'sourceNodeId', type: 'ObjectId', required: true, description: '源节点ID' },
+                                { name: 'sourcePort', type: 'String', required: true, description: '源端口名称' },
+                                { name: 'targetNodeId', type: 'ObjectId', required: true, description: '目标节点ID' },
+                                { name: 'targetPort', type: 'String', required: true, description: '目标端口名称' },
+                                { name: 'dataMapping', type: 'Object', required: false, description: '数据映射配置' },
+                                { name: 'condition', type: 'Object', required: false, description: '连接条件' },
+                                { name: 'style', type: 'Object', required: false, description: '连线样式' },
+                                { name: 'createdAt', type: 'Date', required: true, description: '创建时间' },
+                                { name: 'updatedAt', type: 'Date', required: true, description: '更新时间' }
+                            ],
+                            apis: [
+                                { name: 'createConnection(connectionData)', method: 'POST', description: '创建新连线' },
+                                { name: 'updateConnection(connectionId, updates)', method: 'PUT', description: '更新连线信息' },
+                                { name: 'getConnection(connectionId)', method: 'GET', description: '获取连线详情' },
+                                { name: 'deleteConnection(connectionId)', method: 'DELETE', description: '删除连线' },
+                                { name: 'getConnectionsByCanvas(canvasId)', method: 'GET', description: '获取画布的所有连线' }
+                            ]
+                        },
+                        {
+                            name: 'workflow',
+                            displayName: 'Workflow Model',
+                            description: '工作流状态模型，存储执行状态、运行历史和调度信息',
+                            schema: [
+                                { name: 'id', type: 'ObjectId', required: true, description: '工作流唯一标识' },
+                                { name: 'canvasId', type: 'ObjectId', required: true, description: '关联画布ID' },
+                                { name: 'name', type: 'String', required: true, description: '工作流名称' },
+                                { name: 'status', type: 'String', required: true, description: '执行状态' },
+                                { name: 'startTime', type: 'Date', required: false, description: '开始时间' },
+                                { name: 'endTime', type: 'Date', required: false, description: '结束时间' },
+                                { name: 'executionLog', type: 'Array', required: false, description: '执行日志' },
+                                { name: 'schedule', type: 'Object', required: false, description: '调度配置' },
+                                { name: 'variables', type: 'Object', required: false, description: '工作流变量' },
+                                { name: 'triggerType', type: 'String', required: false, description: '触发类型' },
+                                { name: 'createdAt', type: 'Date', required: true, description: '创建时间' },
+                                { name: 'updatedAt', type: 'Date', required: true, description: '更新时间' }
+                            ],
+                            apis: [
+                                { name: 'createWorkflow(workflowData)', method: 'POST', description: '创建新工作流' },
+                                { name: 'updateWorkflowStatus(workflowId, status)', method: 'PUT', description: '更新工作流状态' },
+                                { name: 'getWorkflow(workflowId)', method: 'GET', description: '获取工作流详情' },
+                                { name: 'getWorkflowHistory(workflowId)', method: 'GET', description: '获取工作流历史' },
+                                { name: 'getActiveWorkflows()', method: 'GET', description: '获取活跃工作流列表' }
+                            ]
+                        },
+                        {
+                            name: 'collaboration',
+                            displayName: 'Collaboration Model',
+                            description: '协作数据模型，存储用户权限、实时编辑状态和变更历史',
+                            schema: [
+                                { name: 'id', type: 'ObjectId', required: true, description: '协作记录唯一标识' },
+                                { name: 'canvasId', type: 'ObjectId', required: true, description: '画布ID' },
+                                { name: 'userId', type: 'ObjectId', required: true, description: '用户ID' },
+                                { name: 'permission', type: 'String', required: true, description: '权限级别' },
+                                { name: 'cursorPosition', type: 'Object', required: false, description: '光标位置' },
+                                { name: 'isOnline', type: 'Boolean', required: false, description: '是否在线' },
+                                { name: 'lastActivity', type: 'Date', required: false, description: '最后活动时间' },
+                                { name: 'changes', type: 'Array', required: false, description: '变更记录' },
+                                { name: 'invitedBy', type: 'ObjectId', required: false, description: '邀请者ID' },
+                                { name: 'joinedAt', type: 'Date', required: true, description: '加入时间' },
+                                { name: 'updatedAt', type: 'Date', required: true, description: '更新时间' }
+                            ],
+                            apis: [
+                                { name: 'addCollaborator(canvasId, userId, permission)', method: 'POST', description: '添加协作者' },
+                                { name: 'updateUserCursor(canvasId, userId, position)', method: 'PUT', description: '更新用户光标位置' },
+                                { name: 'recordChange(canvasId, userId, changeData)', method: 'POST', description: '记录变更' },
+                                { name: 'getCollaborators(canvasId)', method: 'GET', description: '获取协作者列表' },
+                                { name: 'getChangeHistory(canvasId)', method: 'GET', description: '获取变更历史' }
+                            ]
+                        }
+                    ]
+                }
+            },
+            methods: {
+                toggleForm() {
+                    this.isLogin = !this.isLogin;
+                    this.error = '';
+                    this.success = '';
+                    this.resetForm();
+                },
+                resetForm() {
+                    this.form = {
+                        username: '',
+                        email: '',
+                        password: '',
+                        confirmPassword: ''
                     };
-                } else if (event.touches.length === 2) {
-                    const touch1 = event.touches[0];
-                    const touch2 = event.touches[1];
-                    this.touchStartDistance = Math.hypot(
-                        touch2.clientX - touch1.clientX,
-                        touch2.clientY - touch1.clientY
-                    );
-                    this.lastTouchZoom = this.cameraController.getZoom();
-                }
-            }
+                },
+                async handleSubmit() {
+                    this.error = '';
+                    this.success = '';
+                    this.loading = true;
 
-            onTouchMove(event) {
-                event.preventDefault();
-                
-                if (event.touches.length === 1) {
-                    const deltaX = event.touches[0].clientX - this.lastMousePos.x;
-                    const deltaY = event.touches[0].clientY - this.lastMousePos.y;
+                    try {
+                        if (this.isLogin) {
+                            await this.login();
+                        } else {
+                            await this.register();
+                        }
+                    } catch (err) {
+                        this.error = err.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async login() {
+                    // 模拟登录API调用
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                     
-                    this.cameraController.pan(deltaX, deltaY);
+                    if (this.form.email && this.form.password) {
+                        this.isLoggedIn = true;
+                        this.success = '登录成功！';
+                    } else {
+                        throw new Error('请填写完整的登录信息');
+                    }
+                },
+                async register() {
+                    // 验证表单
+                    if (this.form.password !== this.form.confirmPassword) {
+                        throw new Error('两次输入的密码不一致');
+                    }
                     
-                    this.lastMousePos = {
-                        x: event.touches[0].clientX,
-                        y: event.touches[0].clientY
-                    };
-                } else if (event.touches.length === 2) {
-                    const touch1 = event.touches[0];
-                    const touch2 = event.touches[1];
-                    const currentDistance = Math.hypot(
-                        touch2.clientX - touch1.clientX,
-                        touch2.clientY - touch1.clientY
-                    );
+                    if (this.form.password.length < 6) {
+                        throw new Error('密码长度至少6位');
+                    }
+
+                    // 模拟注册API调用
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                     
-                    const scale = currentDistance / this.touchStartDistance;
-                    const newZoom = this.lastTouchZoom * scale;
-                    const currentZoom = this.cameraController.getZoom();
-                    const delta = (newZoom - currentZoom) / currentZoom;
+                    this.success = '注册成功！请登录';
+                    setTimeout(() => {
+                        this.toggleForm();
+                    }, 1500);
+                },
+                logout() {
+                    this.isLoggedIn = false;
+                    this.resetForm();
+                    this.selectedModel = 'canvas';
+                },
+                selectModel(modelName) {
+                    this.selectedModel = modelName;
+                },
+                getCurrentModel() {
+                    return this.dataModels.find(model => model.name === this.selectedModel);
+                },
+                generateSQL(model) {
+                    const tableName = model.name.toLowerCase() + 's';
+                    let sql = `<span class="sql-keyword">CREATE TABLE</span> ${tableName} (\n`;
                     
-                    this.cameraController.zoom(delta);
-                }
-            }
-
-            onTouchEnd(event) {
-                // 触摸结束处理
-            }
-
-            onKeyDown(event) {
-                const moveSpeed = 50;
-                switch (event.key) {
-                    case 'ArrowUp':
-                    case 'w':
-                        this.cameraController.pan(0, -moveSpeed);
-                        break;
-                    case 'ArrowDown':
-                    case 's':
-                        this.cameraController.pan(0, moveSpeed);
-                        break;
-                    case 'ArrowLeft':
-                    case 'a':
-                        this.cameraController.pan(-moveSpeed, 0);
-                        break;
-                    case 'ArrowRight':
-                    case 'd':
-                        this.cameraController.pan(moveSpeed, 0);
-                        break;
-                    case '=':
-                    case '+':
-                        this.cameraController.zoom(0.1);
-                        break;
-                    case '-':
-                        this.cameraController.zoom(-0.1);
-                        break;
-                    case '0':
-                        this.cameraController.reset();
-                        break;
-                }
-            }
-        }
-
-        // ViewportManager - 视口管理
-        class ViewportManager {
-            constructor(camera, renderer) {
-                this.camera = camera;
-                this.renderer = renderer;
-            }
-
-            updateSize() {
-                const width = window.innerWidth;
-                const height = window.innerHeight;
-                
-                this.camera.left = -width / 2;
-                this.camera.right = width / 2;
-                this.camera.top = height / 2;
-                this.camera.bottom = -height / 2;
-                this.camera.updateProjectionMatrix();
-                
-                this.renderer.setSize(width, height);
-            }
-
-            screenToWorld(screenX, screenY) {
-                const rect = this.renderer.domElement.getBoundingClientRect();
-                const x = ((screenX - rect.left) / rect.width) * 2 - 1;
-                const y = -((screenY - rect.top) / rect.height) * 2 + 1;
-                
-                const vector = new THREE.Vector3(x, y, 0);
-                vector.unproject(this.camera);
-                
-                return { x: vector.x, y: vector.y };
-            }
-
-            worldToScreen(worldX, worldY) {
-                const vector = new THREE.Vector3(worldX, worldY, 0);
-                vector.project(this.camera);
-                
-                const rect = this.renderer.domElement.getBoundingClientRect();
-                const x = (vector.x + 1) / 2 * rect.width + rect.left;
-                const y = -(vector.y - 1) / 2 * rect.height + rect.top;
-                
-                return { x, y };
-            }
-
-            getViewBounds() {
-                const width = window.innerWidth / this.camera.zoom;
-                const height = window.innerHeight / this.camera.zoom;
-                
-                return {
-                    left: this.camera.position.x - width / 2,
-                    right: this.camera.position.x + width / 2,
-                    top: this.camera.position.y + height / 2,
-                    bottom: this.camera.position.y - height / 2,
-                    width,
-                    height
-                };
-            }
-        }
-
-        // PerformanceOptimizer - 性能优化
-        class PerformanceOptimizer {
-            constructor(scene, camera) {
-                this.scene = scene;
-                this.camera = camera;
-                this.lastFrameTime = performance.now();
-                this.frameCount = 0;
-                this.fps = 0;
-                this.renderTime = 0;
-                this.visibleObjects = 0;
-                this.frustum = new THREE.Frustum();
-                this.cameraMatrix = new THREE.Matrix4();
-            }
-
-            updateLOD() {
-                // LOD管理 - 根据距离调整细节级别
-                const cameraPosition = this.camera.position;
-                
-                this.scene.traverse((object) => {
-                    if (object.isMesh) {
-                        const distance = cameraPosition.distanceTo(object.position);
+                    model.schema.forEach((field, index) => {
+                        let sqlType = this.mapToSQLType(field.type);
+                        let constraints = field.required ? ' <span class="sql-keyword">NOT NULL</span>' : '';
                         
-                        // 根据距离调整可见性
-                        if (distance > 2000 / this.camera.zoom) {
-                            object.visible = false;
-                        } else {
-                            object.visible = true;
+                        if (field.name === 'id') {
+                            constraints += ' <span class="sql-keyword">PRIMARY KEY</span>';
                         }
-                    }
-                });
-            }
-
-            cullObjects() {
-                // 视锥剔除
-                this.cameraMatrix.multiplyMatrices(
-                    this.camera.projectionMatrix,
-                    this.camera.matrixWorldInverse
-                );
-                this.frustum.setFromProjectionMatrix(this.cameraMatrix);
-                
-                this.visibleObjects = 0;
-                
-                this.scene.traverse((object) => {
-                    if (object.isMesh) {
-                        if (this.frustum.intersectsObject(object)) {
-                            object.visible = true;
-                            this.visibleObjects++;
-                        } else {
-                            object.visible = false;
+                        
+                        sql += `    ${field.name} ${sqlType}${constraints}`;
+                        if (index < model.schema.length - 1) {
+                            sql += ',';
                         }
-                    }
-                });
-            }
-
-            throttleRender() {
-                const currentTime = performance.now();
-                const deltaTime = currentTime - this.lastFrameTime;
-                
-                this.frameCount++;
-                
-                if (deltaTime >= 1000) {
-                    this.fps = Math.round((this.frameCount * 1000) / deltaTime);
-                    this.frameCount = 0;
-                    this.lastFrameTime = currentTime;
-                }
-                
-                return deltaTime;
-            }
-
-            getStats() {
-                return {
-                    fps: this.fps,
-                    renderTime: this.renderTime,
-                    visibleObjects: this.visibleObjects,
-                    memoryUsage: this.getMemoryUsage()
-                };
-            }
-
-            getMemoryUsage() {
-                if (performance.memory) {
-                    return Math.round(performance.memory.usedJSHeapSize / 1024 / 1024);
-                }
-                return 0;
-            }
-        }
-
-        // 主应用类
-        class InfiniteCanvasApp {
-            constructor() {
-                this.canvasEngine = null;
-                this.cameraController = null;
-                this.interactionManager = null;
-                this.viewportManager = null;
-                this.performanceOptimizer = null;
-                this.isRunning = false;
-                this.showPerformance = false;
-                
-                this.uiElements = {
-                    loading: document.getElementById('loading'),
-                    zoomLevel: document.getElementById('zoomLevel'),
-                    posX: document.getElementById('posX'),
-                    posY: document.getElementById('posY'),
-                    objectCount: document.getElementById('objectCount'),
-                    fps: document.getElementById('fps'),
-                    renderTime: document.getElementById('renderTime'),
-                    visibleObjects: document.getElementById('visibleObjects'),
-                    memoryUsage: document.getElementById('memoryUsage'),
-                    perfStats: document.getElementById('perfStats'),
-                    gridUnit: document.getElementById('gridUnit'),
-                    viewBounds: document.getElementById('viewBounds')
-                };
-            }
-
-            async init() {
-                try {
-                    const container = document.getElementById('canvasContainer');
-                    
-                    // 初始化核心引擎
-                    this.canvasEngine = new CanvasEngine(container);
-                    const initSuccess = this.canvasEngine.init();
-                    
-                    if (!initSuccess) {
-                        throw new Error('Failed to initialize canvas engine');
-                    }
-
-                    // 初始化控制器
-                    this.cameraController = new CameraController(this.canvasEngine.camera);
-                    this.interactionManager = new InteractionManager(container, this.cameraController);
-                    this.viewportManager = new ViewportManager(this.canvasEngine.camera, this.canvasEngine.renderer);
-                    this.performanceOptimizer = new PerformanceOptimizer(this.canvasEngine.scene, this.canvasEngine.camera);
-
-                    // 绑定事件
-                    this.interactionManager.bindEvents();
-                    this.bindUIEvents();
-                    
-                    // 窗口大小调整事件
-                    window.addEventListener('resize', () => {
-                        this.canvasEngine.resize();
-                        this.viewportManager.updateSize();
+                        sql += `\n`;
                     });
-
-                    // 隐藏加载界面
-                    this.uiElements.loading.style.display = 'none';
                     
-                    // 开始渲染循环
-                    this.startRenderLoop();
-                    
-                    console.log('Infinite Canvas App initialized successfully');
-                } catch (error) {
-                    console.error('Failed to initialize app:', error);
-                    this.uiElements.loading.textContent = '初始化失败: ' + error.message;
+                    sql += ');';
+                    return sql;
+                },
+                mapToSQLType(type) {
+                    const typeMap = {
+                        'ObjectId': '<span class="sql-keyword">VARCHAR</span>(24)',
+                        'String': '<span class="sql-keyword">VARCHAR</span>(255)',
+                        'Boolean': '<span class="sql-keyword">BOOLEAN</span>',
+                        'Date': '<span class="sql-keyword">TIMESTAMP</span>',
+                        'Object': '<span class="sql-keyword">JSON</span>',
+                        'Array': '<span class="sql-keyword">JSON</span>'
+                    };
+                    return typeMap[type] || '<span class="sql-keyword">TEXT</span>';
+                }
+            },
+            mounted() {
+                // 检查是否已登录（从localStorage或其他持久化存储）
+                const savedLoginState = localStorage.getItem('isLoggedIn');
+                if (savedLoginState === 'true') {
+                    this.isLoggedIn = true;
+                }
+            },
+            watch: {
+                isLoggedIn(newVal) {
+                    // 保存登录状态
+                    localStorage.setItem('isLoggedIn', newVal.toString());
                 }
             }
-
-            bindUIEvents() {
-                // 重置视图
-                document.getElementById('resetView').addEventListener('click', () => {
-                    this.cameraController.reset();
-                });
-
-                // 添加对象
-                document.getElementById('addObjects').addEventListener('click', () => {
-                    this.canvasEngine.addRandomObjects(10);
-                });
-
-                // 切换网格
-                document.getElementById('toggleGrid').addEventListener('click', () => {
-                    this.canvasEngine.toggleGrid();
-                });
-
-                // 切换性能监控
-                document.getElementById('togglePerf').addEventListener('click', () => {
-                    this.showPerformance = !this.showPerformance;
-                    this.uiElements.perfStats.style.display = this.showPerformance ? 'block' : 'none';
-                });
-            }
-
-            startRenderLoop() {
-                this.isRunning = true;
-                this.renderLoop();
-            }
-
-            renderLoop() {
-                if (!this.isRunning) return;
-
-                const startTime = performance.now();
-                
-                // 性能优化
-                this.performanceOptimizer.updateLOD();
-                this.performanceOptimizer.cullObjects();
-                this.performanceOptimizer.throttleRender();
-                
-                // 渲染
-                this.canvasEngine.render();
-                
-                const endTime = performance.now();
-                this.performanceOptimizer.renderTime = Math.round(endTime - startTime);
-                
-                // 更新UI
-                this.updateUI();
-                
-                requestAnimationFrame(() => this.renderLoop());
-            }
-
-            updateUI() {
-                // 更新基础信息
-                const zoom = this.cameraController.getZoom();
-                const position = this.cameraController.getPosition();
-                const objectCount = this.canvasEngine.getObjectCount();
-                
-                this.uiElements.zoomLevel.textContent = zoom.toFixed(2);
-                this.uiElements.posX.textContent = position.x;
-                this.uiElements.posY.textContent = position.y;
-                this.uiElements.objectCount.textContent = objectCount;
-                
-                // 更新性能信息
-                if (this.showPerformance) {
-                    const stats = this.performanceOptimizer.getStats();
-                    this.uiElements.fps.textContent = stats.fps;
-                    this.uiElements.renderTime.textContent = stats.renderTime;
-                    this.uiElements.visibleObjects.textContent = stats.visibleObjects;
-                    this.uiElements.memoryUsage.textContent = stats.memoryUsage;
-                }
-                
-                // 更新网格信息
-                const viewBounds = this.viewportManager.getViewBounds();
-                this.uiElements.viewBounds.textContent = `${Math.round(viewBounds.width)} x ${Math.round(viewBounds.height)}`;
-            }
-
-            stop() {
-                this.isRunning = false;
-                if (this.canvasEngine) {
-                    this.canvasEngine.dispose();
-                }
-            }
-        }
-
-        // 启动应用
-        document.addEventListener('DOMContentLoaded', () => {
-            const app = new InfiniteCanvasApp();
-            app.init();
-            
-            // 全局错误处理
-            window.addEventListener('error', (event) => {
-                console.error('Global error:', event.error);
-            });
-            
-            // 页面卸载时清理资源
-            window.addEventListener('beforeunload', () => {
-                app.stop();
-            });
-        });
+        }).mount('#app');
     </script>
 </body>
 </html>
