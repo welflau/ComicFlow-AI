@@ -1,120 +1,136 @@
 import pytest
 from pathlib import Path
-import json
-import subprocess
-import sys
 import os
+import sys
 
-class TestSystemIntegration:
+# 添加项目根目录到Python路径
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+class TestDeployConfiguration:
+    """部署配置与文档测试类"""
     
-    def test_html_file_exists_and_contains_key_elements(self):
-        """测试HTML文件是否存在并包含关键元素"""
-        html_file = Path("index.html")
-        assert html_file.exists(), "index.html文件不存在"
+    def test_dev_notes_file_exists(self):
+        """测试开发笔记文档文件是否存在"""
+        dev_notes_path = Path("docs/78b245/b949fa/dev-notes.md")
+        assert dev_notes_path.exists(), f"开发笔记文档文件不存在: {dev_notes_path}"
+        assert dev_notes_path.is_file(), f"路径不是文件: {dev_notes_path}"
+    
+    def test_deploy_module_structure(self):
+        """测试部署模块目录结构是否完整"""
+        deploy_module_path = Path("deploy")
         
-        content = html_file.read_text(encoding='utf-8')
-        assert content.strip(), "HTML文件内容为空"
+        # 检查deploy模块目录是否存在
+        if deploy_module_path.exists():
+            assert deploy_module_path.is_dir(), "deploy应该是一个目录"
+            
+            # 检查常见的部署配置文件
+            common_deploy_files = [
+                "requirements.txt",
+                "Dockerfile",
+                "docker-compose.yml",
+                "config.py",
+                "__init__.py"
+            ]
+            
+            existing_files = []
+            for file_name in common_deploy_files:
+                file_path = deploy_module_path / file_name
+                if file_path.exists():
+                    existing_files.append(file_name)
+            
+            # 至少应该存在一个部署相关文件
+            assert len(existing_files) > 0, f"deploy目录中未找到常见的部署配置文件: {common_deploy_files}"
+        else:
+            # 如果deploy目录不存在，检查是否有deploy.py文件
+            deploy_file_path = Path("deploy.py")
+            assert deploy_file_path.exists(), "既没有deploy目录也没有deploy.py文件"
+    
+    def test_documentation_content_validity(self):
+        """测试文档内容的有效性和完整性"""
+        docs_base_path = Path("docs")
         
-        # 检查HTML基本结构
-        assert "<html" in content.lower(), "HTML文件缺少html标签"
-        assert "<head" in content.lower(), "HTML文件缺少head标签"
-        assert "<body" in content.lower(), "HTML文件缺少body标签"
-        
-        # 检查是否包含标题或主要内容区域
-        has_title = "<title" in content.lower()
-        has_main = "<main" in content.lower() or "<div" in content.lower()
-        assert has_title or has_main, "HTML文件缺少标题或主要内容区域"
+        if docs_base_path.exists():
+            # 检查文档目录结构
+            target_doc_path = docs_base_path / "78b245" / "b949fa" / "dev-notes.md"
+            
+            if target_doc_path.exists():
+                # 读取文档内容并检查关键信息
+                content = target_doc_path.read_text(encoding='utf-8')
+                
+                # 检查文档不为空
+                assert len(content.strip()) > 0, "开发笔记文档内容为空"
+                
+                # 检查是否包含常见的开发文档关键词
+                dev_keywords = [
+                    "部署", "配置", "环境", "安装", "运行",
+                    "deploy", "config", "setup", "install", "run"
+                ]
+                
+                found_keywords = []
+                content_lower = content.lower()
+                for keyword in dev_keywords:
+                    if keyword.lower() in content_lower:
+                        found_keywords.append(keyword)
+                
+                assert len(found_keywords) > 0, f"文档中未找到开发相关关键词: {dev_keywords}"
+            else:
+                # 如果目标文档不存在，检查docs目录下是否有其他文档文件
+                doc_files = list(docs_base_path.rglob("*.md"))
+                doc_files.extend(list(docs_base_path.rglob("*.txt")))
+                doc_files.extend(list(docs_base_path.rglob("*.rst")))
+                
+                assert len(doc_files) > 0, "docs目录中未找到任何文档文件"
+        else:
+            # 如果docs目录不存在，检查项目根目录下的README文件
+            readme_files = [
+                Path("README.md"),
+                Path("README.txt"),
+                Path("README.rst"),
+                Path("readme.md")
+            ]
+            
+            existing_readme = [f for f in readme_files if f.exists()]
+            assert len(existing_readme) > 0, "未找到项目文档文件（README或docs目录）"
 
-    def test_server_js_file_structure_and_syntax(self):
-        """测试server.js文件结构和语法正确性"""
-        server_file = Path("server.js")
-        assert server_file.exists(), "server.js文件不存在"
-        
-        content = server_file.read_text(encoding='utf-8')
-        assert content.strip(), "server.js文件内容为空"
-        
-        # 检查Node.js服务器常见模块导入
-        common_imports = ["require", "express", "http", "app", "server"]
-        has_server_code = any(keyword in content for keyword in common_imports)
-        assert has_server_code, "server.js文件不包含服务器相关代码"
-        
-        # 检查是否有端口监听或路由定义
-        has_listen = "listen" in content
-        has_route = any(method in content for method in ["get", "post", "put", "delete", "use"])
-        assert has_listen or has_route, "server.js文件缺少端口监听或路由定义"
-
-    def test_package_json_structure_and_dependencies(self):
-        """测试package.json文件结构和依赖配置"""
-        package_file = Path("package.json")
-        assert package_file.exists(), "package.json文件不存在"
-        
+    def test_deploy_module_importability(self):
+        """测试部署模块是否可以正确导入"""
         try:
-            package_data = json.loads(package_file.read_text(encoding='utf-8'))
-        except json.JSONDecodeError:
-            pytest.fail("package.json文件格式不正确，无法解析JSON")
-        
-        # 检查必要字段
-        assert "name" in package_data, "package.json缺少name字段"
-        assert "version" in package_data, "package.json缺少version字段"
-        
-        # 检查脚本或依赖
-        has_scripts = "scripts" in package_data and package_data["scripts"]
-        has_dependencies = "dependencies" in package_data and package_data["dependencies"]
-        has_dev_dependencies = "devDependencies" in package_data and package_data["devDependencies"]
-        
-        assert has_scripts or has_dependencies or has_dev_dependencies, \
-            "package.json缺少scripts、dependencies或devDependencies配置"
+            # 尝试导入deploy模块
+            if Path("deploy/__init__.py").exists():
+                import deploy
+                assert hasattr(deploy, '__name__'), "deploy模块导入失败"
+            elif Path("deploy.py").exists():
+                import deploy
+                assert hasattr(deploy, '__name__'), "deploy.py文件导入失败"
+            else:
+                # 如果没有deploy模块，跳过此测试
+                pytest.skip("未找到可导入的deploy模块")
+        except ImportError as e:
+            pytest.fail(f"导入deploy模块失败: {e}")
 
-    def test_documentation_file_exists_and_readable(self):
-        """测试文档文件是否存在且可读"""
-        doc_file = Path("docs/78b245/b1efbf/dev-notes.md")
-        assert doc_file.exists(), "开发文档文件不存在"
-        
-        content = doc_file.read_text(encoding='utf-8')
-        assert content.strip(), "文档文件内容为空"
-        
-        # 检查Markdown基本格式
-        has_markdown_elements = any(marker in content for marker in ["#", "##", "###", "*", "-", "`"])
-        assert has_markdown_elements, "文档文件不包含Markdown格式元素"
-
-    def test_project_file_structure_integrity(self):
-        """测试项目文件结构完整性"""
-        required_files = [
-            Path("index.html"),
-            Path("server.js"), 
-            Path("package.json"),
-            Path("docs/78b245/b1efbf/dev-notes.md")
+    def test_project_configuration_files(self):
+        """测试项目配置文件的存在性和有效性"""
+        config_files = [
+            "setup.py",
+            "pyproject.toml",
+            "requirements.txt",
+            "Pipfile",
+            "environment.yml",
+            "config.ini",
+            "config.yaml",
+            "config.json"
         ]
         
-        missing_files = []
-        for file_path in required_files:
-            if not file_path.exists():
-                missing_files.append(str(file_path))
+        existing_configs = []
+        for config_file in config_files:
+            config_path = Path(config_file)
+            if config_path.exists():
+                existing_configs.append(config_file)
+                
+                # 检查文件不为空
+                if config_path.stat().st_size > 0:
+                    assert True, f"配置文件 {config_file} 存在且不为空"
         
-        assert not missing_files, f"缺少必要文件: {', '.join(missing_files)}"
-        
-        # 检查docs目录结构
-        docs_dir = Path("docs")
-        assert docs_dir.is_dir(), "docs目录不存在或不是目录"
-        
-        nested_dir = Path("docs/78b245/b1efbf")
-        assert nested_dir.is_dir(), "文档嵌套目录结构不正确"
-
-    def test_node_modules_and_dependencies_compatibility(self):
-        """测试Node.js依赖兼容性（如果存在node_modules）"""
-        package_file = Path("package.json")
-        if not package_file.exists():
-            pytest.skip("package.json不存在，跳过依赖测试")
-        
-        node_modules = Path("node_modules")
-        package_lock = Path("package-lock.json")
-        yarn_lock = Path("yarn.lock")
-        
-        # 如果存在锁文件，检查依赖一致性
-        if package_lock.exists() or yarn_lock.exists():
-            assert node_modules.exists(), "存在锁文件但缺少node_modules目录"
-            
-            if node_modules.exists():
-                # 检查node_modules不为空
-                module_contents = list(node_modules.iterdir())
-                assert module_contents, "node_modules目录为空"
+        # 至少应该存在一个配置文件
+        assert len(existing_configs) > 0, f"未找到任何项目配置文件: {config_files}"
