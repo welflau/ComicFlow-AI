@@ -24,22 +24,28 @@ CI/CD Pipeline Architecture
 
 ### Environment Configuration
 职责: 管理不同环境的配置
-- .env.example
-- docker-compose.prod.yml
-- nginx.conf
+- .env.development
+- .env.staging
+- .env.production
 
-### Quality Gates
-职责: 代码质量检查和安全扫描
-- .github/workflows/security-scan.yml
-- sonar-project.properties
+### Docker Integration
+职责: 容器化构建和部署
+- Dockerfile.production
+- docker-compose.prod.yml
+
+### Deployment Configuration
+职责: 部署配置和服务器管理
+- deploy/nginx.conf
+- deploy/pm2.config.js
 
 ## 数据流
-代码提交 -> GitHub触发 -> 代码检查(ESLint/Prettier) -> 单元测试(Jest) -> 集成测试(Cypress) -> 构建Docker镜像 -> 安全扫描 -> 部署到测试环境 -> 自动化测试 -> 部署到生产环境 -> 健康检查
+代码推送到GitHub → 触发CI流水线 → 运行代码检查和测试 → 构建Docker镜像 → 推送到镜像仓库 → 触发CD流水线 → 部署到目标环境 → 健康检查和通知
 
 ## 关键决策
-- 使用GitHub Actions作为CI/CD平台，与现有代码仓库无缝集成
+- 选择GitHub Actions作为CI/CD平台，与现有GitHub仓库无缝集成
 - 采用多阶段流水线设计：CI负责构建测试，CD负责部署
-- 集成现有的Docker配置和测试框架，保持架构一致性
-- 实现分支策略：main分支自动部署生产，develop分支部署测试环境
-- 配置环境变量和密钥管理，确保部署安全性
-- 建立回滚机制和健康检查，保证服务稳定性
+- 使用Docker容器化部署，确保环境一致性
+- 配置分支保护规则，确保代码质量
+- 集成现有的测试框架和代码规范检查
+- 支持多环境部署（开发/测试/生产）
+- 添加部署回滚机制和健康检查
