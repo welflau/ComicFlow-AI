@@ -1,4 +1,4 @@
-"""测试: 前端实时协作集成"""
+"""测试: 性能优化与测试"""
 import os
 from pathlib import Path
 
