@@ -1,100 +1,146 @@
 import pytest
-from pathlib import Path
-import sys
+import json
 import os
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+import sys
 
-# 添加项目根目录到Python路径
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+# 获取项目根目录
+PROJECT_ROOT = Path(__file__).parent
+BACKEND_DIR = PROJECT_ROOT / "backend"
 
-class TestDatabaseModule:
-    """数据库模块测试类"""
+class TestBackendInfrastructure:
     
-    def test_feature_6473_file_exists(self):
-        """测试feature_6473.py文件是否存在"""
-        feature_file = project_root / "src" / "models" / "feature_6473.py"
-        assert feature_file.exists(), f"特性文件 {feature_file} 不存在"
-        assert feature_file.is_file(), f"{feature_file} 不是一个有效的文件"
-    
-    def test_feature_6473_module_importable(self):
-        """测试feature_6473模块是否可以正常导入"""
-        try:
-            # 动态导入模块
-            feature_module_path = project_root / "src" / "models" / "feature_6473.py"
-            if feature_module_path.exists():
-                import importlib.util
-                spec = importlib.util.spec_from_file_location("feature_6473", feature_module_path)
-                feature_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(feature_module)
-                
-                # 验证模块对象存在
-                assert feature_module is not None, "模块导入失败"
-                assert hasattr(feature_module, '__name__'), "模块缺少基本属性"
-        except ImportError as e:
-            pytest.fail(f"无法导入feature_6473模块: {e}")
-        except Exception as e:
-            pytest.fail(f"导入模块时发生未知错误: {e}")
-    
-    def test_dev_notes_documentation_exists(self):
-        """测试开发文档是否存在并包含关键信息"""
-        dev_notes_file = project_root / "docs" / "d2c78b" / "4c8e2a" / "dev-notes.md"
-        assert dev_notes_file.exists(), f"开发文档 {dev_notes_file} 不存在"
-        assert dev_notes_file.is_file(), f"{dev_notes_file} 不是一个有效的文件"
+    def test_package_json_exists_and_valid(self):
+        """测试 package.json 文件是否存在且包含必要的配置信息"""
+        package_json_path = BACKEND_DIR / "package.json"
         
-        # 检查文档内容
-        try:
-            content = dev_notes_file.read_text(encoding='utf-8')
-            assert len(content.strip()) > 0, "开发文档内容为空"
-            
-            # 检查是否包含数据库相关关键词
-            database_keywords = ['database', '数据库', 'schema', '架构', 'model', '模型']
-            has_database_content = any(keyword.lower() in content.lower() for keyword in database_keywords)
-            assert has_database_content, "开发文档缺少数据库相关内容"
-            
-        except UnicodeDecodeError:
-            pytest.fail("无法读取开发文档，可能存在编码问题")
-        except Exception as e:
-            pytest.fail(f"读取开发文档时发生错误: {e}")
-    
-    def test_database_module_structure(self):
-        """测试数据库模块目录结构是否正确"""
-        src_dir = project_root / "src"
-        models_dir = src_dir / "models"
-        docs_dir = project_root / "docs"
+        # 检查文件是否存在
+        assert package_json_path.exists(), "package.json 文件不存在"
         
-        assert src_dir.exists(), "src目录不存在"
-        assert models_dir.exists(), "models目录不存在"
-        assert docs_dir.exists(), "docs目录不存在"
+        # 检查文件是否为有效的 JSON 格式
+        with open(package_json_path, 'r', encoding='utf-8') as f:
+            package_data = json.load(f)
         
-        # 验证目录结构
-        assert src_dir.is_dir(), "src不是目录"
-        assert models_dir.is_dir(), "models不是目录"
-        assert docs_dir.is_dir(), "docs不是目录"
-    
-    def test_feature_6473_basic_functionality(self):
-        """测试feature_6473模块的基本功能"""
-        feature_module_path = project_root / "src" / "models" / "feature_6473.py"
+        # 检查必要的字段
+        assert "name" in package_data, "package.json 缺少 name 字段"
+        assert "version" in package_data, "package.json 缺少 version 字段"
+        assert "dependencies" in package_data, "package.json 缺少 dependencies 字段"
         
-        if not feature_module_path.exists():
-            pytest.skip("feature_6473.py文件不存在，跳过功能测试")
+        # 检查是否包含常见的后端依赖
+        dependencies = package_data.get("dependencies", {})
+        backend_packages = ["express", "mongoose", "dotenv", "cors"]
+        found_packages = [pkg for pkg in backend_packages if pkg in dependencies]
+        assert len(found_packages) > 0, "package.json 中未找到常见的后端依赖包"
+
+    def test_server_js_structure_and_imports(self):
+        """测试 server.js 文件是否存在且包含基本的服务器配置代码"""
+        server_js_path = BACKEND_DIR / "server.js"
         
-        try:
-            import importlib.util
-            spec = importlib.util.spec_from_file_location("feature_6473", feature_module_path)
-            feature_module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(feature_module)
-            
-            # 检查模块是否定义了类或函数
-            module_attrs = [attr for attr in dir(feature_module) if not attr.startswith('_')]
-            assert len(module_attrs) > 0, "模块没有定义任何公共属性或方法"
-            
-            # 如果存在类，验证类的基本结构
-            for attr_name in module_attrs:
-                attr = getattr(feature_module, attr_name)
-                if isinstance(attr, type):  # 如果是类
-                    assert hasattr(attr, '__init__'), f"类 {attr_name} 缺少初始化方法"
-                elif callable(attr):  # 如果是函数
-                    assert hasattr(attr, '__call__'), f"函数 {attr_name} 不可调用"
-                    
-        except Exception as e:
-            pytest.fail(f"测试模块功能时发生错误: {e}")
+        # 检查文件是否存在
+        assert server_js_path.exists(), "server.js 文件不存在"
+        
+        # 读取文件内容
+        with open(server_js_path, 'r', encoding='utf-8') as f:
+            server_content = f.read()
+        
+        # 检查是否包含基本的服务器配置
+        required_imports = ["express", "require"]
+        for import_item in required_imports:
+            assert import_item in server_content, f"server.js 中缺少 {import_item} 相关代码"
+        
+        # 检查是否包含端口配置和服务器启动代码
+        server_keywords = ["listen", "port", "app"]
+        found_keywords = [keyword for keyword in server_keywords if keyword in server_content.lower()]
+        assert len(found_keywords) >= 2, "server.js 中缺少基本的服务器启动配置"
+
+    def test_env_file_and_database_config(self):
+        """测试环境配置文件和数据库配置文件是否存在且格式正确"""
+        env_path = BACKEND_DIR / ".env"
+        db_config_path = BACKEND_DIR / "config" / "database.js"
+        
+        # 检查 .env 文件是否存在
+        assert env_path.exists(), ".env 文件不存在"
+        
+        # 读取 .env 文件内容
+        with open(env_path, 'r', encoding='utf-8') as f:
+            env_content = f.read()
+        
+        # 检查是否包含数据库相关的环境变量
+        env_variables = ["PORT", "DB", "DATABASE", "MONGO"]
+        found_variables = [var for var in env_variables if var in env_content.upper()]
+        assert len(found_variables) > 0, ".env 文件中缺少数据库相关的环境变量"
+        
+        # 检查数据库配置文件是否存在
+        assert db_config_path.exists(), "config/database.js 文件不存在"
+        
+        # 读取数据库配置文件内容
+        with open(db_config_path, 'r', encoding='utf-8') as f:
+            db_config_content = f.read()
+        
+        # 检查是否包含数据库连接相关代码
+        db_keywords = ["connect", "mongoose", "database", "module.exports"]
+        found_db_keywords = [keyword for keyword in db_keywords if keyword.lower() in db_config_content.lower()]
+        assert len(found_db_keywords) >= 2, "database.js 中缺少数据库连接相关配置"
+
+    def test_user_model_structure(self):
+        """测试用户模型文件是否存在且包含正确的模型定义"""
+        user_model_path = BACKEND_DIR / "models" / "User.js"
+        
+        # 检查文件是否存在
+        assert user_model_path.exists(), "models/User.js 文件不存在"
+        
+        # 读取用户模型文件内容
+        with open(user_model_path, 'r', encoding='utf-8') as f:
+            user_model_content = f.read()
+        
+        # 检查是否包含 Mongoose 模型相关代码
+        model_keywords = ["schema", "model", "mongoose", "module.exports"]
+        for keyword in model_keywords:
+            assert keyword.lower() in user_model_content.lower(), f"User.js 中缺少 {keyword} 相关代码"
+        
+        # 检查是否包含用户模型的基本字段
+        user_fields = ["name", "email", "password", "username"]
+        found_fields = [field for field in user_fields if field.lower() in user_model_content.lower()]
+        assert len(found_fields) >= 2, "User.js 中缺少基本的用户字段定义"
+
+    def test_backend_directory_structure(self):
+        """测试后端项目的目录结构是否完整"""
+        # 检查主要目录是否存在
+        required_dirs = ["config", "models"]
+        for dir_name in required_dirs:
+            dir_path = BACKEND_DIR / dir_name
+            assert dir_path.exists() and dir_path.is_dir(), f"{dir_name} 目录不存在"
+        
+        # 检查主要文件是否存在
+        required_files = ["package.json", "server.js", ".env"]
+        for file_name in required_files:
+            file_path = BACKEND_DIR / file_name
+            assert file_path.exists() and file_path.is_file(), f"{file_name} 文件不存在"
+
+    @patch('builtins.open')
+    def test_config_files_can_be_imported(self, mock_open):
+        """测试配置文件的导入功能和返回类型是否正确"""
+        # 模拟数据库配置文件内容
+        mock_db_config = """
+        const mongoose = require('mongoose');
+        
+        const connectDB = async () => {
+            try {
+                await mongoose.connect(process.env.MONGODB_URI);
+                console.log('MongoDB connected');
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        
+        module.exports = connectDB;
+        """
+        
+        mock_open.return_value.__enter__.return_value.read.return_value = mock_db_config
+        
+        db_config_path = BACKEND_DIR / "config" / "database.js"
+        
+        # 检查文件是否可以被读取
+        if db_config_path.exists():
+            with open
