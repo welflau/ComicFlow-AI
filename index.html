@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>工作流画布系统</title>
-    <script src="https://unpkg.com/vue@3.3.8/dist/vue.global.js"></script>
+    <title>节点系统工作流画布</title>
+    <script src="https://unpkg.com/three@0.155.0/build/three.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -16,733 +16,781 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            overflow: hidden;
         }
 
         .app-container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .auth-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            max-width: 400px;
-            margin: 0 auto;
-        }
-
-        .dashboard-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            padding: 30px;
-            min-height: 500px;
-        }
-
-        .auth-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .auth-header h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
-
-        .auth-header p {
-            opacity: 0.9;
-            font-size: 14px;
-        }
-
-        .auth-form {
-            padding: 30px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 500;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e1e5e9;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .error-message {
-            color: #e74c3c;
-            font-size: 14px;
-            margin-top: 10px;
-            text-align: center;
-        }
-
-        .success-message {
-            color: #27ae60;
-            font-size: 14px;
-            margin-top: 10px;
-            text-align: center;
-        }
-
-        .toggle-form {
-            text-align: center;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #e1e5e9;
-        }
-
-        .toggle-form a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .toggle-form a:hover {
-            text-decoration: underline;
-        }
-
-        /* 数据库管理界面样式 */
-        .db-management {
-            width: 100%;
+            width: 100vw;
             height: 100vh;
-            background: #f5f7fa;
             display: flex;
             flex-direction: column;
         }
 
-        .db-header {
-            background: white;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        .toolbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
             display: flex;
-            justify-content: space-between;
+            gap: 15px;
             align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
         }
 
-        .db-header h1 {
+        .toolbar h1 {
             color: #333;
-            font-size: 24px;
+            font-size: 20px;
+            margin-right: 30px;
         }
 
-        .logout-btn {
+        .node-button {
             padding: 8px 16px;
-            background: #e74c3c;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+        .input-node-btn {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+
+        .process-node-btn {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+        }
+
+        .output-node-btn {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+        }
+
+        .node-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .node-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 250px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+        }
+
+        .node-info h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .node-info p {
+            color: #666;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+
+        .process-select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+
+        .delete-btn {
+            background: #f44336;
             color: white;
             border: none;
+            padding: 8px 16px;
             border-radius: 6px;
             cursor: pointer;
+            margin-top: 15px;
             font-size: 14px;
         }
 
-        .db-content {
-            flex: 1;
-            display: flex;
-            padding: 20px;
-            gap: 20px;
-        }
-
-        .db-sidebar {
-            width: 250px;
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            height: fit-content;
-        }
-
-        .db-main {
-            flex: 1;
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .model-list {
-            list-style: none;
-        }
-
-        .model-item {
-            padding: 12px;
-            margin-bottom: 8px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .model-item:hover {
-            background: #e9ecef;
-        }
-
-        .model-item.active {
-            background: #667eea;
-            color: white;
-        }
-
-        .model-details {
-            margin-bottom: 30px;
-        }
-
-        .model-details h3 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 20px;
-        }
-
-        .schema-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-
-        .schema-table th,
-        .schema-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #e1e5e9;
-        }
-
-        .schema-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .data-type {
-            background: #e3f2fd;
-            color: #1976d2;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .required {
-            color: #e74c3c;
-            font-weight: bold;
-        }
-
-        .api-section {
-            margin-top: 30px;
-        }
-
-        .api-section h4 {
-            color: #333;
-            margin-bottom: 15px;
-        }
-
-        .api-list {
-            background: #f8f9fa;
-            border-radius: 6px;
-            padding: 15px;
-        }
-
-        .api-item {
-            margin-bottom: 8px;
-            font-family: 'Courier New', monospace;
-            color: #495057;
-        }
-
-        .method {
-            background: #28a745;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 12px;
-            margin-right: 8px;
-        }
-
-        .method.post {
-            background: #007bff;
-        }
-
-        .method.put {
-            background: #ffc107;
-            color: #333;
-        }
-
-        .method.delete {
-            background: #dc3545;
-        }
-
-        .sql-preview {
-            background: #2d3748;
-            color: #e2e8f0;
-            padding: 20px;
-            border-radius: 6px;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.5;
-            overflow-x: auto;
-            margin-top: 20px;
-        }
-
-        .sql-keyword {
-            color: #63b3ed;
-            font-weight: bold;
-        }
-
-        .sql-string {
-            color: #68d391;
-        }
-
-        .sql-comment {
-            color: #a0aec0;
-            font-style: italic;
+        .delete-btn:hover {
+            background: #d32f2f;
         }
     </style>
 </head>
 <body>
-    <div id="app">
-        <!-- 登录/注册界面 -->
-        <div v-if="!isLoggedIn" class="app-container">
-            <div class="auth-container">
-                <div class="auth-header">
-                    <h1>{{ isLogin ? '登录' : '注册' }}</h1>
-                    <p>{{ isLogin ? '欢迎回来，请登录您的账户' : '创建新账户开始使用' }}</p>
-                </div>
-                <form @submit.prevent="handleSubmit" class="auth-form">
-                    <div v-if="!isLogin" class="form-group">
-                        <label for="username">用户名</label>
-                        <input 
-                            type="text" 
-                            id="username" 
-                            v-model="form.username" 
-                            required
-                            placeholder="请输入用户名"
-                        >
-                    </div>
-                    <div class="form-group">
-                        <label for="email">邮箱</label>
-                        <input 
-                            type="email" 
-                            id="email" 
-                            v-model="form.email" 
-                            required
-                            placeholder="请输入邮箱地址"
-                        >
-                    </div>
-                    <div class="form-group">
-                        <label for="password">密码</label>
-                        <input 
-                            type="password" 
-                            id="password" 
-                            v-model="form.password" 
-                            required
-                            placeholder="请输入密码"
-                        >
-                    </div>
-                    <div v-if="!isLogin" class="form-group">
-                        <label for="confirmPassword">确认密码</label>
-                        <input 
-                            type="password" 
-                            id="confirmPassword" 
-                            v-model="form.confirmPassword" 
-                            required
-                            placeholder="请再次输入密码"
-                        >
-                    </div>
-                    <button type="submit" class="btn" :disabled="loading">
-                        {{ loading ? '处理中...' : (isLogin ? '登录' : '注册') }}
-                    </button>
-                    <div v-if="error" class="error-message">{{ error }}</div>
-                    <div v-if="success" class="success-message">{{ success }}</div>
-                    <div class="toggle-form">
-                        <span>{{ isLogin ? '还没有账户？' : '已有账户？' }}</span>
-                        <a href="#" @click.prevent="toggleForm">
-                            {{ isLogin ? '立即注册' : '立即登录' }}
-                        </a>
-                    </div>
-                </form>
-            </div>
+    <div class="app-container">
+        <div class="toolbar">
+            <h1>节点系统工作流</h1>
+            <button class="node-button input-node-btn" onclick="nodeSystem.createNode('input', {x: Math.random() * 5 - 2.5, y: Math.random() * 3 - 1.5, z: 0})">添加输入节点</button>
+            <button class="node-button process-node-btn" onclick="nodeSystem.createNode('process', {x: Math.random() * 5 - 2.5, y: Math.random() * 3 - 1.5, z: 0})">添加处理节点</button>
+            <button class="node-button output-node-btn" onclick="nodeSystem.createNode('output', {x: Math.random() * 5 - 2.5, y: Math.random() * 3 - 1.5, z: 0})">添加输出节点</button>
         </div>
-
-        <!-- 数据库管理界面 -->
-        <div v-if="isLoggedIn" class="db-management">
-            <div class="db-header">
-                <h1>工作流画布数据库设计</h1>
-                <button @click="logout" class="logout-btn">退出登录</button>
-            </div>
-            <div class="db-content">
-                <div class="db-sidebar">
-                    <h3>数据模型</h3>
-                    <ul class="model-list">
-                        <li 
-                            v-for="model in dataModels" 
-                            :key="model.name"
-                            :class="['model-item', { active: selectedModel === model.name }]"
-                            @click="selectModel(model.name)"
-                        >
-                            {{ model.displayName }}
-                        </li>
-                    </ul>
-                </div>
-                <div class="db-main">
-                    <div v-if="selectedModel" class="model-details">
-                        <h3>{{ getCurrentModel().displayName }}</h3>
-                        <p><strong>描述：</strong>{{ getCurrentModel().description }}</p>
-                        
-                        <h4>数据结构</h4>
-                        <table class="schema-table">
-                            <thead>
-                                <tr>
-                                    <th>字段名</th>
-                                    <th>数据类型</th>
-                                    <th>是否必需</th>
-                                    <th>描述</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="field in getCurrentModel().schema" :key="field.name">
-                                    <td>{{ field.name }}</td>
-                                    <td><span class="data-type">{{ field.type }}</span></td>
-                                    <td><span :class="{ required: field.required }">{{ field.required ? '是' : '否' }}</span></td>
-                                    <td>{{ field.description }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-
-                        <div class="api-section">
-                            <h4>API 接口</h4>
-                            <div class="api-list">
-                                <div v-for="api in getCurrentModel().apis" :key="api.name" class="api-item">
-                                    <span :class="['method', api.method.toLowerCase()]">{{ api.method }}</span>
-                                    <strong>{{ api.name }}</strong> - {{ api.description }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="sql-preview">
-                            <div class="sql-comment">-- {{ getCurrentModel().displayName }} 表结构</div>
-                            <pre>{{ generateSQL(getCurrentModel()) }}</pre>
-                        </div>
-                    </div>
-                    <div v-else>
-                        <h3>请选择一个数据模型查看详情</h3>
-                        <p>从左侧列表中选择一个数据模型来查看其结构、API接口和SQL定义。</p>
-                    </div>
-                </div>
+        <div class="canvas-container">
+            <canvas id="canvas"></canvas>
+            <div class="node-info" id="nodeInfo" style="display: none;">
+                <h3 id="nodeTitle">节点信息</h3>
+                <div id="nodeContent"></div>
             </div>
         </div>
     </div>
 
     <script>
-        const { createApp } = Vue;
+        // 节点系统核心管理器
+        class NodeSystem {
+            constructor() {
+                this.nodes = new Map();
+                this.nodeTypes = new Map();
+                this.selectedNode = null;
+                this.nodeIdCounter = 0;
+                this.initializeNodeTypes();
+            }
 
-        createApp({
-            data() {
-                return {
-                    isLoggedIn: false,
-                    isLogin: true,
-                    loading: false,
-                    error: '',
-                    success: '',
-                    selectedModel: 'canvas',
-                    form: {
-                        username: '',
-                        email: '',
-                        password: '',
-                        confirmPassword: ''
-                    },
-                    dataModels: [
-                        {
-                            name: 'canvas',
-                            displayName: 'Canvas Model',
-                            description: '画布数据模型，存储画布基本信息、视图状态和元数据',
-                            schema: [
-                                { name: 'id', type: 'ObjectId', required: true, description: '画布唯一标识' },
-                                { name: 'name', type: 'String', required: true, description: '画布名称' },
-                                { name: 'description', type: 'String', required: false, description: '画布描述' },
-                                { name: 'ownerId', type: 'ObjectId', required: true, description: '创建者ID' },
-                                { name: 'viewState', type: 'Object', required: false, description: '视图状态（缩放、平移等）' },
-                                { name: 'metadata', type: 'Object', required: false, description: '元数据信息' },
-                                { name: 'isPublic', type: 'Boolean', required: false, description: '是否公开' },
-                                { name: 'tags', type: 'Array', required: false, description: '标签列表' },
-                                { name: 'createdAt', type: 'Date', required: true, description: '创建时间' },
-                                { name: 'updatedAt', type: 'Date', required: true, description: '更新时间' }
-                            ],
-                            apis: [
-                                { name: 'createCanvas(canvasData)', method: 'POST', description: '创建新画布' },
-                                { name: 'updateCanvas(canvasId, updates)', method: 'PUT', description: '更新画布信息' },
-                                { name: 'getCanvas(canvasId)', method: 'GET', description: '获取画布详情' },
-                                { name: 'deleteCanvas(canvasId)', method: 'DELETE', description: '删除画布' },
-                                { name: 'getCanvasByUser(userId)', method: 'GET', description: '获取用户的画布列表' }
-                            ]
-                        },
-                        {
-                            name: 'node',
-                            displayName: 'Node Model',
-                            description: '节点数据模型，存储节点类型、位置、配置和状态信息',
-                            schema: [
-                                { name: 'id', type: 'ObjectId', required: true, description: '节点唯一标识' },
-                                { name: 'canvasId', type: 'ObjectId', required: true, description: '所属画布ID' },
-                                { name: 'type', type: 'String', required: true, description: '节点类型' },
-                                { name: 'name', type: 'String', required: true, description: '节点名称' },
-                                { name: 'position', type: 'Object', required: true, description: '节点位置坐标 {x, y}' },
-                                { name: 'size', type: 'Object', required: false, description: '节点尺寸 {width, height}' },
-                                { name: 'config', type: 'Object', required: false, description: '节点配置参数' },
-                                { name: 'status', type: 'String', required: false, description: '节点状态' },
-                                { name: 'inputPorts', type: 'Array', required: false, description: '输入端口配置' },
-                                { name: 'outputPorts', type: 'Array', required: false, description: '输出端口配置' },
-                                { name: 'createdAt', type: 'Date', required: true, description: '创建时间' },
-                                { name: 'updatedAt', type: 'Date', required: true, description: '更新时间' }
-                            ],
-                            apis: [
-                                { name: 'createNode(nodeData)', method: 'POST', description: '创建新节点' },
-                                { name: 'updateNode(nodeId, updates)', method: 'PUT', description: '更新节点信息' },
-                                { name: 'getNode(nodeId)', method: 'GET', description: '获取节点详情' },
-                                { name: 'deleteNode(nodeId)', method: 'DELETE', description: '删除节点' },
-                                { name: 'getNodesByCanvas(canvasId)', method: 'GET', description: '获取画布的所有节点' }
-                            ]
-                        },
-                        {
-                            name: 'connection',
-                            displayName: 'Connection Model',
-                            description: '连线数据模型，存储节点间的连接关系和数据流配置',
-                            schema: [
-                                { name: 'id', type: 'ObjectId', required: true, description: '连线唯一标识' },
-                                { name: 'canvasId', type: 'ObjectId', required: true, description: '所属画布ID' },
-                                { name: 'sourceNodeId', type: 'ObjectId', required: true, description: '源节点ID' },
-                                { name: 'sourcePort', type: 'String', required: true, description: '源端口名称' },
-                                { name: 'targetNodeId', type: 'ObjectId', required: true, description: '目标节点ID' },
-                                { name: 'targetPort', type: 'String', required: true, description: '目标端口名称' },
-                                { name: 'dataMapping', type: 'Object', required: false, description: '数据映射配置' },
-                                { name: 'condition', type: 'Object', required: false, description: '连接条件' },
-                                { name: 'style', type: 'Object', required: false, description: '连线样式' },
-                                { name: 'createdAt', type: 'Date', required: true, description: '创建时间' },
-                                { name: 'updatedAt', type: 'Date', required: true, description: '更新时间' }
-                            ],
-                            apis: [
-                                { name: 'createConnection(connectionData)', method: 'POST', description: '创建新连线' },
-                                { name: 'updateConnection(connectionId, updates)', method: 'PUT', description: '更新连线信息' },
-                                { name: 'getConnection(connectionId)', method: 'GET', description: '获取连线详情' },
-                                { name: 'deleteConnection(connectionId)', method: 'DELETE', description: '删除连线' },
-                                { name: 'getConnectionsByCanvas(canvasId)', method: 'GET', description: '获取画布的所有连线' }
-                            ]
-                        },
-                        {
-                            name: 'workflow',
-                            displayName: 'Workflow Model',
-                            description: '工作流状态模型，存储执行状态、运行历史和调度信息',
-                            schema: [
-                                { name: 'id', type: 'ObjectId', required: true, description: '工作流唯一标识' },
-                                { name: 'canvasId', type: 'ObjectId', required: true, description: '关联画布ID' },
-                                { name: 'name', type: 'String', required: true, description: '工作流名称' },
-                                { name: 'status', type: 'String', required: true, description: '执行状态' },
-                                { name: 'startTime', type: 'Date', required: false, description: '开始时间' },
-                                { name: 'endTime', type: 'Date', required: false, description: '结束时间' },
-                                { name: 'executionLog', type: 'Array', required: false, description: '执行日志' },
-                                { name: 'schedule', type: 'Object', required: false, description: '调度配置' },
-                                { name: 'variables', type: 'Object', required: false, description: '工作流变量' },
-                                { name: 'triggerType', type: 'String', required: false, description: '触发类型' },
-                                { name: 'createdAt', type: 'Date', required: true, description: '创建时间' },
-                                { name: 'updatedAt', type: 'Date', required: true, description: '更新时间' }
-                            ],
-                            apis: [
-                                { name: 'createWorkflow(workflowData)', method: 'POST', description: '创建新工作流' },
-                                { name: 'updateWorkflowStatus(workflowId, status)', method: 'PUT', description: '更新工作流状态' },
-                                { name: 'getWorkflow(workflowId)', method: 'GET', description: '获取工作流详情' },
-                                { name: 'getWorkflowHistory(workflowId)', method: 'GET', description: '获取工作流历史' },
-                                { name: 'getActiveWorkflows()', method: 'GET', description: '获取活跃工作流列表' }
-                            ]
-                        },
-                        {
-                            name: 'collaboration',
-                            displayName: 'Collaboration Model',
-                            description: '协作数据模型，存储用户权限、实时编辑状态和变更历史',
-                            schema: [
-                                { name: 'id', type: 'ObjectId', required: true, description: '协作记录唯一标识' },
-                                { name: 'canvasId', type: 'ObjectId', required: true, description: '画布ID' },
-                                { name: 'userId', type: 'ObjectId', required: true, description: '用户ID' },
-                                { name: 'permission', type: 'String', required: true, description: '权限级别' },
-                                { name: 'cursorPosition', type: 'Object', required: false, description: '光标位置' },
-                                { name: 'isOnline', type: 'Boolean', required: false, description: '是否在线' },
-                                { name: 'lastActivity', type: 'Date', required: false, description: '最后活动时间' },
-                                { name: 'changes', type: 'Array', required: false, description: '变更记录' },
-                                { name: 'invitedBy', type: 'ObjectId', required: false, description: '邀请者ID' },
-                                { name: 'joinedAt', type: 'Date', required: true, description: '加入时间' },
-                                { name: 'updatedAt', type: 'Date', required: true, description: '更新时间' }
-                            ],
-                            apis: [
-                                { name: 'addCollaborator(canvasId, userId, permission)', method: 'POST', description: '添加协作者' },
-                                { name: 'updateUserCursor(canvasId, userId, position)', method: 'PUT', description: '更新用户光标位置' },
-                                { name: 'recordChange(canvasId, userId, changeData)', method: 'POST', description: '记录变更' },
-                                { name: 'getCollaborators(canvasId)', method: 'GET', description: '获取协作者列表' },
-                                { name: 'getChangeHistory(canvasId)', method: 'GET', description: '获取变更历史' }
-                            ]
-                        }
-                    ]
-                }
-            },
-            methods: {
-                toggleForm() {
-                    this.isLogin = !this.isLogin;
-                    this.error = '';
-                    this.success = '';
-                    this.resetForm();
-                },
-                resetForm() {
-                    this.form = {
-                        username: '',
-                        email: '',
-                        password: '',
-                        confirmPassword: ''
-                    };
-                },
-                async handleSubmit() {
-                    this.error = '';
-                    this.success = '';
-                    this.loading = true;
+            initializeNodeTypes() {
+                this.registerNodeType('input', {
+                    color: 0x4CAF50,
+                    size: { width: 1.5, height: 0.8, depth: 0.2 },
+                    class: InputNode
+                });
+                this.registerNodeType('process', {
+                    color: 0x2196F3,
+                    size: { width: 1.8, height: 1.0, depth: 0.2 },
+                    class: ProcessNode
+                });
+                this.registerNodeType('output', {
+                    color: 0xFF9800,
+                    size: { width: 1.5, height: 0.8, depth: 0.2 },
+                    class: OutputNode
+                });
+            }
 
-                    try {
-                        if (this.isLogin) {
-                            await this.login();
-                        } else {
-                            await this.register();
-                        }
-                    } catch (err) {
-                        this.error = err.message;
-                    } finally {
-                        this.loading = false;
-                    }
-                },
-                async login() {
-                    // 模拟登录API调用
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    
-                    if (this.form.email && this.form.password) {
-                        this.isLoggedIn = true;
-                        this.success = '登录成功！';
-                    } else {
-                        throw new Error('请填写完整的登录信息');
-                    }
-                },
-                async register() {
-                    // 验证表单
-                    if (this.form.password !== this.form.confirmPassword) {
-                        throw new Error('两次输入的密码不一致');
-                    }
-                    
-                    if (this.form.password.length < 6) {
-                        throw new Error('密码长度至少6位');
-                    }
+            createNode(type, position) {
+                const nodeId = `node_${++this.nodeIdCounter}`;
+                const nodeConfig = this.nodeTypes.get(type);
+                if (!nodeConfig) {
+                    console.error(`Unknown node type: ${type}`);
+                    return null;
+                }
 
-                    // 模拟注册API调用
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    
-                    this.success = '注册成功！请登录';
-                    setTimeout(() => {
-                        this.toggleForm();
-                    }, 1500);
-                },
-                logout() {
-                    this.isLoggedIn = false;
-                    this.resetForm();
-                    this.selectedModel = 'canvas';
-                },
-                selectModel(modelName) {
-                    this.selectedModel = modelName;
-                },
-                getCurrentModel() {
-                    return this.dataModels.find(model => model.name === this.selectedModel);
-                },
-                generateSQL(model) {
-                    const tableName = model.name.toLowerCase() + 's';
-                    let sql = `<span class="sql-keyword">CREATE TABLE</span> ${tableName} (\n`;
-                    
-                    model.schema.forEach((field, index) => {
-                        let sqlType = this.mapToSQLType(field.type);
-                        let constraints = field.required ? ' <span class="sql-keyword">NOT NULL</span>' : '';
-                        
-                        if (field.name === 'id') {
-                            constraints += ' <span class="sql-keyword">PRIMARY KEY</span>';
+                const node = new nodeConfig.class(nodeId, type, position);
+                this.nodes.set(nodeId, node);
+                
+                // 渲染节点
+                nodeRenderer.renderNode(node, scene);
+                
+                // 启用拖拽
+                dragController.enableDrag(node);
+                
+                return node;
+            }
+
+            deleteNode(nodeId) {
+                const node = this.nodes.get(nodeId);
+                if (node) {
+                    // 从场景中移除
+                    if (node.mesh) {
+                        scene.remove(node.mesh);
+                        if (node.textMesh) {
+                            scene.remove(node.textMesh);
                         }
-                        
-                        sql += `    ${field.name} ${sqlType}${constraints}`;
-                        if (index < model.schema.length - 1) {
-                            sql += ',';
-                        }
-                        sql += `\n`;
-                    });
+                    }
                     
-                    sql += ');';
-                    return sql;
-                },
-                mapToSQLType(type) {
-                    const typeMap = {
-                        'ObjectId': '<span class="sql-keyword">VARCHAR</span>(24)',
-                        'String': '<span class="sql-keyword">VARCHAR</span>(255)',
-                        'Boolean': '<span class="sql-keyword">BOOLEAN</span>',
-                        'Date': '<span class="sql-keyword">TIMESTAMP</span>',
-                        'Object': '<span class="sql-keyword">JSON</span>',
-                        'Array': '<span class="sql-keyword">JSON</span>'
-                    };
-                    return typeMap[type] || '<span class="sql-keyword">TEXT</span>';
-                }
-            },
-            mounted() {
-                // 检查是否已登录（从localStorage或其他持久化存储）
-                const savedLoginState = localStorage.getItem('isLoggedIn');
-                if (savedLoginState === 'true') {
-                    this.isLoggedIn = true;
-                }
-            },
-            watch: {
-                isLoggedIn(newVal) {
-                    // 保存登录状态
-                    localStorage.setItem('isLoggedIn', newVal.toString());
+                    // 禁用拖拽
+                    dragController.disableDrag(node);
+                    
+                    // 从系统中移除
+                    this.nodes.delete(nodeId);
+                    
+                    // 如果是选中的节点，清除选择
+                    if (this.selectedNode === node) {
+                        this.selectedNode = null;
+                        this.hideNodeInfo();
+                    }
                 }
             }
-        }).mount('#app');
+
+            getNodeById(nodeId) {
+                return this.nodes.get(nodeId);
+            }
+
+            getAllNodes() {
+                return Array.from(this.nodes.values());
+            }
+
+            registerNodeType(type, config) {
+                this.nodeTypes.set(type, config);
+            }
+
+            selectNode(node) {
+                // 清除之前选中节点的高亮
+                if (this.selectedNode && this.selectedNode.mesh) {
+                    this.selectedNode.mesh.material.emissive.setHex(0x000000);
+                }
+                
+                this.selectedNode = node;
+                
+                // 高亮选中节点
+                if (node && node.mesh) {
+                    node.mesh.material.emissive.setHex(0x444444);
+                }
+                
+                this.showNodeInfo(node);
+            }
+
+            showNodeInfo(node) {
+                const nodeInfo = document.getElementById('nodeInfo');
+                const nodeTitle = document.getElementById('nodeTitle');
+                const nodeContent = document.getElementById('nodeContent');
+                
+                if (node) {
+                    nodeTitle.textContent = `${node.type.toUpperCase()} 节点`;
+                    nodeContent.innerHTML = node.getInfoHTML();
+                    nodeInfo.style.display = 'block';
+                } else {
+                    nodeInfo.style.display = 'none';
+                }
+            }
+
+            hideNodeInfo() {
+                document.getElementById('nodeInfo').style.display = 'none';
+            }
+        }
+
+        // 节点基类
+        class BaseNode {
+            constructor(id, type, position) {
+                this.id = id;
+                this.type = type;
+                this.position = position || { x: 0, y: 0, z: 0 };
+                this.ports = new Map();
+                this.mesh = null;
+                this.textMesh = null;
+                this.isDragging = false;
+            }
+
+            render() {
+                // 由子类实现具体渲染逻辑
+            }
+
+            update() {
+                // 更新节点状态
+            }
+
+            setPosition(x, y, z = 0) {
+                this.position = { x, y, z };
+                if (this.mesh) {
+                    this.mesh.position.set(x, y, z);
+                }
+                if (this.textMesh) {
+                    this.textMesh.position.set(x, y + 0.6, z + 0.1);
+                }
+            }
+
+            getPosition() {
+                return this.position;
+            }
+
+            addPort(type, name) {
+                const portId = `${this.id}_${type}_${name}`;
+                this.ports.set(portId, { type, name });
+                return portId;
+            }
+
+            removePort(portId) {
+                this.ports.delete(portId);
+            }
+
+            getInfoHTML() {
+                return `
+                    <p><strong>ID:</strong> ${this.id}</p>
+                    <p><strong>类型:</strong> ${this.type}</p>
+                    <p><strong>位置:</strong> (${this.position.x.toFixed(2)}, ${this.position.y.toFixed(2)})</p>
+                    <button class="delete-btn" onclick="nodeSystem.deleteNode('${this.id}')">删除节点</button>
+                `;
+            }
+        }
+
+        // 输入节点
+        class InputNode extends BaseNode {
+            constructor(id, type, position) {
+                super(id, type, position);
+                this.value = '';
+                this.inputType = 'text';
+                this.callbacks = [];
+            }
+
+            setValue(value) {
+                this.value = value;
+                this.callbacks.forEach(callback => callback(value));
+            }
+
+            getValue() {
+                return this.value;
+            }
+
+            validateInput() {
+                return this.value !== null && this.value !== undefined;
+            }
+
+            onInputChange(callback) {
+                this.callbacks.push(callback);
+            }
+
+            getInfoHTML() {
+                return `
+                    ${super.getInfoHTML()}
+                    <p><strong>输入值:</strong></p>
+                    <input type="text" class="input-field" value="${this.value}" 
+                           onchange="nodeSystem.getNodeById('${this.id}').setValue(this.value)" 
+                           placeholder="请输入数据...">
+                    <p style="margin-top: 10px;"><strong>当前值:</strong> ${this.value || '未设置'}</p>
+                `;
+            }
+        }
+
+        // 处理节点
+        class ProcessNode extends BaseNode {
+            constructor(id, type, position) {
+                super(id, type, position);
+                this.processFunction = null;
+                this.outputData = null;
+                this.processType = 'uppercase';
+                this.callbacks = [];
+            }
+
+            process(inputData) {
+                let result;
+                switch (this.processType) {
+                    case 'uppercase':
+                        result = String(inputData).toUpperCase();
+                        break;
+                    case 'lowercase':
+                        result = String(inputData).toLowerCase();
+                        break;
+                    case 'reverse':
+                        result = String(inputData).split('').reverse().join('');
+                        break;
+                    case 'length':
+                        result = String(inputData).length;
+                        break;
+                    default:
+                        result = inputData;
+                }
+                
+                this.outputData = result;
+                this.callbacks.forEach(callback => callback(result));
+                return result;
+            }
+
+            setProcessFunction(fn) {
+                this.processFunction = fn;
+            }
+
+            getOutputData() {
+                return this.outputData;
+            }
+
+            onProcessComplete(callback) {
+                this.callbacks.push(callback);
+            }
+
+            setProcessType(type) {
+                this.processType = type;
+            }
+
+            getInfoHTML() {
+                return `
+                    ${super.getInfoHTML()}
+                    <p><strong>处理类型:</strong></p>
+                    <select class="process-select" onchange="nodeSystem.getNodeById('${this.id}').setProcessType(this.value)">
+                        <option value="uppercase" ${this.processType === 'uppercase' ? 'selected' : ''}>转大写</option>
+                        <option value="lowercase" ${this.processType === 'lowercase' ? 'selected' : ''}>转小写</option>
+                        <option value="reverse" ${this.processType === 'reverse' ? 'selected' : ''}>反转字符串</option>
+                        <option value="length" ${this.processType === 'length' ? 'selected' : ''}>获取长度</option>
+                    </select>
+                    <p style="margin-top: 10px;"><strong>输出数据:</strong> ${this.outputData || '未处理'}</p>
+                    <button class="node-button process-node-btn" style="margin-top: 10px; width: 100%;" 
+                            onclick="this.processTestData('${this.id}')">测试处理</button>
+                `;
+            }
+        }
+
+        // 输出节点
+        class OutputNode extends BaseNode {
+            constructor(id, type, position) {
+                super(id, type, position);
+                this.displayData = null;
+                this.displayMode = 'text';
+                this.callbacks = [];
+            }
+
+            displayResult(data) {
+                this.displayData = data;
+                this.callbacks.forEach(callback => callback(data));
+            }
+
+            exportData(format) {
+                switch (format) {
+                    case 'json':
+                        return JSON.stringify(this.displayData);
+                    case 'text':
+                        return String(this.displayData);
+                    default:
+                        return this.displayData;
+                }
+            }
+
+            setDisplayMode(mode) {
+                this.displayMode = mode;
+            }
+
+            onOutputReady(callback) {
+                this.callbacks.push(callback);
+            }
+
+            getInfoHTML() {
+                return `
+                    ${super.getInfoHTML()}
+                    <p><strong>显示模式:</strong> ${this.displayMode}</p>
+                    <p><strong>显示数据:</strong></p>
+                    <div style="background: #f5f5f5; padding: 10px; border-radius: 4px; margin-top: 5px; word-break: break-all;">
+                        ${this.displayData || '暂无数据'}
+                    </div>
+                    <button class="node-button output-node-btn" style="margin-top: 10px; width: 100%;" 
+                            onclick="this.exportCurrentData('${this.id}')">导出数据</button>
+                `;
+            }
+        }
+
+        // 拖拽控制器
+        class DragController {
+            constructor() {
+                this.draggedNode = null;
+                this.isDragging = false;
+                this.dragStartCallbacks = [];
+                this.dragMoveCallbacks = [];
+                this.dragEndCallbacks = [];
+                this.mousePosition = new THREE.Vector2();
+                this.raycaster = new THREE.Raycaster();
+            }
+
+            enableDrag(node) {
+                if (node.mesh) {
+                    node.mesh.userData.draggable = true;
+                    node.mesh.userData.node = node;
+                }
+            }
+
+            disableDrag(node) {
+                if (node.mesh) {
+                    node.mesh.userData.draggable = false;
+                    node.mesh.userData.node = null;
+                }
+            }
+
+            onDragStart(callback) {
+                this.dragStartCallbacks.push(callback);
+            }
+
+            onDragMove(callback) {
+                this.dragMoveCallbacks.push(callback);
+            }
+
+            onDragEnd(callback) {
+                this.dragEndCallbacks.push(callback);
+            }
+
+            handleMouseDown(event) {
+                this.updateMousePosition(event);
+                this.raycaster.setFromCamera(this.mousePosition, camera);
+                
+                const intersects = this.raycaster.intersectObjects(scene.children.filter(obj => obj.userData.draggable));
+                
+                if (intersects.length > 0) {
+                    const intersectedObject = intersects[0].object;
+                    const node = intersectedObject.userData.node;
+                    
+                    if (node) {
+                        this.draggedNode = node;
+                        this.isDragging = true;
+                        node.isDragging = true;
+                        
+                        // 选中节点
+                        nodeSystem.selectNode(node);
+                        
+                        this.dragStartCallbacks.forEach(callback => callback(node));
+                    }
+                } else {
+                    // 点击空白处，取消选择
+                    nodeSystem.selectNode(null);
+                }
+            }
+
+            handleMouseMove(event) {
+                if (this.isDragging && this.draggedNode) {
+                    this.updateMousePosition(event);
+                    this.raycaster.setFromCamera(this.mousePosition, camera);
+                    
+                    // 计算新位置
+                    const distance = 5; // 距离相机的距离
+                    const newPosition = new THREE.Vector3();
+                    newPosition.copy(this.raycaster.ray.direction);
+                    newPosition.multiplyScalar(distance);
+                    newPosition.add(this.raycaster.ray.origin);
+                    
+                    // 限制在合理范围内
+                    newPosition.x = Math.max(-10, Math.min(10, newPosition.x));
+                    newPosition.y = Math.max(-5, Math.min(5, newPosition.y));
+                    newPosition.z = 0;
+                    
+                    this.draggedNode.setPosition(newPosition.x, newPosition.y, newPosition.z);
+                    
+                    this.dragMoveCallbacks.forEach(callback => callback(this.draggedNode, newPosition));
+                }
+            }
+
+            handleMouseUp(event) {
+                if (this.isDragging && this.draggedNode) {
+                    this.draggedNode.isDragging = false;
+                    this.dragEndCallbacks.forEach(callback => callback(this.draggedNode));
+                    
+                    this.draggedNode = null;
+                    this.isDragging = false;
+                }
+            }
+
+            updateMousePosition(event) {
+                const rect = canvas.getBoundingClientRect();
+                this.mousePosition.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                this.mousePosition.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            }
+        }
+
+        // 节点渲染器
+        class NodeRenderer {
+            constructor() {
+                this.textureLoader = new THREE.TextureLoader();
+            }
+
+            renderNode(node, scene) {
+                const nodeConfig = nodeSystem.nodeTypes.get(node.type);
+                if (!nodeConfig) return;
+
+                // 创建几何体
+                const geometry = this.createNodeGeometry(node.type, nodeConfig.size);
+                
+                // 创建材质
+                const material = new THREE.MeshLambertMaterial({ 
+                    color: nodeConfig.color,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                
+                // 创建网格
+                node.mesh = new THREE.Mesh(geometry, material);
+                node.mesh.position.set(node.position.x, node.position.y, node.position.z);
+                node.mesh.userData.draggable = true;
+                node.mesh.userData.node = node;
+                
+                // 添加到场景
+                scene.add(node.mesh);
+                
+                // 创建文本标签
+                this.createTextLabel(node, scene);
+            }
+
+            createNodeGeometry(type, size) {
+                return new THREE.BoxGeometry(size.width, size.height, size.depth);
+            }
+
+            createTextLabel(node, scene) {
+                // 创建简单的文本标签
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = 256;
+                canvas.height = 64;
+                
+                context.fillStyle = 'white';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                
+                context.fillStyle = 'black';
+                context.font = '20px Arial';
+                context.textAlign = 'center';
+                context.fillText(node.type.toUpperCase(), canvas.width / 2, canvas.height / 2 + 7);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                const material = new THREE.MeshBasicMaterial({ 
+                    map: texture, 
+                    transparent: true,
+                    alphaTest: 0.1
+                });
+                
+                const geometry = new THREE.PlaneGeometry(1, 0.25);
+                node.textMesh = new THREE.Mesh(geometry, material);
+                node.textMesh.position.set(node.position.x, node.position.y + 0.6, node.position.z + 0.1);
+                
+                scene.add(node.textMesh);
+            }
+
+            updateNodeVisual(node) {
+                if (node.mesh) {
+                    // 更新节点视觉效果
+                }
+            }
+
+            updateNodePosition(node, position) {
+                node.setPosition(position.x, position.y, position.z);
+            }
+        }
+
+        // 全局变量
+        let scene, camera, renderer, canvas;
+        let nodeSystem, dragController, nodeRenderer;
+
+        // 初始化Three.js场景
+        function initThreeJS() {
+            canvas = document.getElementById('canvas');
+            
+            // 创建场景
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            
+            // 创建相机
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 5);
+            
+            // 创建渲染器
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight - 70); // 减去工具栏高度
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            // 添加光源
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            // 添加网格
+            const gridHelper = new THREE.GridHelper(20, 20, 0xcccccc, 0xcccccc);
+            gridHelper.rotateX(Math.PI / 2);
+            scene.add(gridHelper);
+        }
+
+        // 初始化系统
+        function initSystems() {
+            nodeSystem = new NodeSystem();
+            dragController = new DragController();
+            nodeRenderer = new NodeRenderer();
+        }
+
+        // 事件监听
+        function setupEventListeners() {
+            // 鼠标事件
+            canvas.addEventListener('mousedown', (event) => {
+                dragController.handleMouseDown(event);
+            });
+            
+            canvas.addEventListener('mousemove', (event) => {
+                dragController.handleMouseMove(event);
+            });
+            
+            canvas.addEventListener('mouseup', (event) => {
+                dragController.handleMouseUp(event);
+            });
+            
+            // 窗口大小调整
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / (window.innerHeight - 70);
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight - 70);
+            });
+        }
+
+        // 动画循环
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // 更新所有节点
+            nodeSystem.getAllNodes().forEach(node => {
+                node.update();
+            });
+            
+            renderer.render(scene, camera);
+        }
+
+        // 辅助函数
+        window.processTestData = function(nodeId) {
+            const node = nodeSystem.getNodeById(nodeId);
+            if (node && node instanceof ProcessNode) {
+                const testData = 'Hello World';
+                const result = node.process(testData);
+                alert(`处理结果: ${result}`);
+                
+                // 更新节点信息显示
+                nodeSystem.showNodeInfo(node);
+            }
+        };
+
+        window.exportCurrentData = function(nodeId) {
+            const node = nodeSystem.getNodeById(nodeId);
+            if (node && node instanceof OutputNode) {
+                const data = node.exportData('text');
+                if (data) {
+                    const blob = new Blob([data], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `node_${nodeId}_output.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                } else {
+                    alert('暂无数据可导出');
+                }
+            }
+        };
+
+        // 页面加载完成后初始化
+        window.addEventListener('load', () => {
+            initThreeJS();
+            initSystems();
+            setupEventListeners();
+            animate();
+            
+            // 创建示例节点
+            setTimeout(() => {
+                nodeSystem.createNode('input', { x: -3, y: 1, z: 0 });
+                nodeSystem.createNode('process', { x: 0, y: 1, z: 0 });
+                nodeSystem.createNode('output', { x: 3, y: 1, z: 0 });
+            }, 500);
+        });
     </script>
 </body>
 </html>
