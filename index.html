@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>工单管理系统</title>
+    <title>节点系统工作流画布</title>
+    <script src="https://unpkg.com/three@0.155.0/build/three.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -42,163 +43,7 @@
             margin-right: 30px;
         }
 
-        .main-content {
-            flex: 1;
-            display: flex;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(5px);
-        }
-
-        .sidebar {
-            width: 300px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 20px;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-            overflow-y: auto;
-        }
-
-        .sidebar h2 {
-            color: #333;
-            margin-bottom: 20px;
-            font-size: 18px;
-        }
-
-        .status-stats {
-            margin-bottom: 30px;
-        }
-
-        .stat-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 15px;
-            margin-bottom: 8px;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 8px;
-            border-left: 4px solid #ddd;
-            transition: all 0.3s ease;
-        }
-
-        .stat-item:hover {
-            background: rgba(255, 255, 255, 1);
-            transform: translateX(5px);
-        }
-
-        .stat-item.testing {
-            border-left-color: #FF9800;
-        }
-
-        .stat-item.completed {
-            border-left-color: #4CAF50;
-        }
-
-        .stat-item.pending {
-            border-left-color: #2196F3;
-        }
-
-        .stat-item.failed {
-            border-left-color: #f44336;
-        }
-
-        .stat-label {
-            font-weight: 500;
-            color: #333;
-        }
-
-        .stat-count {
-            background: #667eea;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .content-area {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .ticket-list {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .ticket-list h2 {
-            color: #333;
-            margin-bottom: 20px;
-            font-size: 18px;
-        }
-
-        .ticket-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            margin-bottom: 10px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .ticket-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-        }
-
-        .ticket-info {
-            flex: 1;
-        }
-
-        .ticket-title {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 5px;
-        }
-
-        .ticket-meta {
-            font-size: 12px;
-            color: #666;
-        }
-
-        .ticket-status {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-            text-align: center;
-            min-width: 80px;
-        }
-
-        .status-testing {
-            background: #FFF3E0;
-            color: #F57C00;
-            border: 1px solid #FFB74D;
-        }
-
-        .status-completed {
-            background: #E8F5E8;
-            color: #2E7D32;
-            border: 1px solid #81C784;
-        }
-
-        .status-pending {
-            background: #E3F2FD;
-            color: #1565C0;
-            border: 1px solid #64B5F6;
-        }
-
-        .status-failed {
-            background: #FFEBEE;
-            color: #C62828;
-            border: 1px solid #EF5350;
-        }
-
-        .refresh-btn {
+        .node-button {
             padding: 8px 16px;
             border: none;
             border-radius: 8px;
@@ -206,280 +51,569 @@
             font-size: 14px;
             font-weight: 500;
             transition: all 0.3s ease;
-            background: linear-gradient(135deg, #4CAF50, #45a049);
             color: white;
         }
 
-        .refresh-btn:hover {
+        .input-node-btn {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+
+        .process-node-btn {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+        }
+
+        .output-node-btn {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+        }
+
+        .node-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: grab;
+        }
+
+        #canvas:active {
+            cursor: grabbing;
+        }
+
+        .canvas-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-family: monospace;
+            z-index: 100;
         }
     </style>
 </head>
 <body>
     <div class="app-container">
         <div class="toolbar">
-            <h1>工单管理系统</h1>
-            <button class="refresh-btn" onclick="refreshData()">刷新数据</button>
+            <h1>无限画布系统</h1>
+            <button class="node-button input-node-btn" onclick="canvasApp.addTestNode('input')">输入节点</button>
+            <button class="node-button process-node-btn" onclick="canvasApp.addTestNode('process')">处理节点</button>
+            <button class="node-button output-node-btn" onclick="canvasApp.addTestNode('output')">输出节点</button>
+            <button class="node-button" style="background: #666;" onclick="canvasApp.resetView()">重置视图</button>
         </div>
-        
-        <div class="main-content">
-            <div class="sidebar">
-                <h2>工单统计</h2>
-                <div class="status-stats" id="statusStats">
-                    <!-- 统计数据将通过 JavaScript 动态生成 -->
-                </div>
-            </div>
-            
-            <div class="content-area">
-                <div class="ticket-list">
-                    <h2>工单列表</h2>
-                    <div id="ticketList">
-                        <!-- 工单列表将通过 JavaScript 动态生成 -->
-                    </div>
-                </div>
+        <div class="canvas-container">
+            <canvas id="canvas"></canvas>
+            <div class="canvas-info">
+                <div>缩放: <span id="zoom-info">1.0</span></div>
+                <div>位置: <span id="position-info">(0, 0)</span></div>
+                <div>FPS: <span id="fps-info">60</span></div>
             </div>
         </div>
     </div>
 
     <script>
-        // 工单状态枚举
-        const TICKET_STATUS = {
-            PENDING: 'pending',
-            TESTING: 'testing', 
-            COMPLETED: 'completed',
-            FAILED: 'failed'
-        };
-
-        // 状态显示映射
-        const STATUS_DISPLAY = {
-            [TICKET_STATUS.PENDING]: '待处理',
-            [TICKET_STATUS.TESTING]: '测试中',
-            [TICKET_STATUS.COMPLETED]: '已完成',
-            [TICKET_STATUS.FAILED]: '测试失败'
-        };
-
-        // 模拟工单数据
-        let ticketData = [
-            {
-                id: 'T001',
-                title: '用户登录功能优化',
-                description: '优化用户登录流程，提升用户体验',
-                status: TICKET_STATUS.COMPLETED,
-                assignee: '张三',
-                createTime: '2024-01-15 09:30:00',
-                updateTime: '2024-01-16 14:20:00'
-            },
-            {
-                id: 'T002', 
-                title: '数据库性能调优',
-                description: '优化数据库查询性能，减少响应时间',
-                status: TICKET_STATUS.TESTING,
-                assignee: '李四',
-                createTime: '2024-01-16 10:15:00',
-                updateTime: '2024-01-17 16:45:00'
-            },
-            {
-                id: 'T003',
-                title: '移动端适配问题修复', 
-                description: '修复移动端页面显示异常问题',
-                status: TICKET_STATUS.PENDING,
-                assignee: '王五',
-                createTime: '2024-01-17 11:20:00',
-                updateTime: '2024-01-17 11:20:00'
-            },
-            {
-                id: 'T004',
-                title: '支付接口集成',
-                description: '集成第三方支付接口，支持多种支付方式',
-                status: TICKET_STATUS.FAILED,
-                assignee: '赵六',
-                createTime: '2024-01-18 08:45:00',
-                updateTime: '2024-01-18 17:30:00'
+        // CanvasRenderer - 基于Three.js的画布渲染引擎
+        class CanvasRenderer {
+            constructor() {
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.container = null;
+                this.animationId = null;
+                this.isInitialized = false;
             }
-        ];
 
-        // 添加更多测试数据以达到描述中的数量
-        for (let i = 5; i <= 35; i++) {
-            const statuses = [TICKET_STATUS.TESTING, TICKET_STATUS.COMPLETED, TICKET_STATUS.PENDING, TICKET_STATUS.FAILED];
-            const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
-            
-            ticketData.push({
-                id: `T${String(i).padStart(3, '0')}`,
-                title: `工单任务 ${i}`,
-                description: `这是第 ${i} 个工单任务的描述`,
-                status: randomStatus,
-                assignee: ['张三', '李四', '王五', '赵六', '钱七', '孙八'][Math.floor(Math.random() * 6)],
-                createTime: `2024-01-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')} ${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:00`,
-                updateTime: `2024-01-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')} ${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:00`
-            });
-        }
-
-        // 确保有31个测试中的工单
-        let testingCount = ticketData.filter(ticket => ticket.status === TICKET_STATUS.TESTING).length;
-        let index = 0;
-        while (testingCount < 31 && index < ticketData.length) {
-            if (ticketData[index].status !== TICKET_STATUS.TESTING) {
-                ticketData[index].status = TICKET_STATUS.TESTING;
-                testingCount++;
-            }
-            index++;
-        }
-
-        /**
-         * 统计各状态工单数量
-         * @returns {Object} 状态统计对象
-         */
-        function getStatusStats() {
-            const stats = {
-                [TICKET_STATUS.PENDING]: 0,
-                [TICKET_STATUS.TESTING]: 0,
-                [TICKET_STATUS.COMPLETED]: 0,
-                [TICKET_STATUS.FAILED]: 0
-            };
-
-            ticketData.forEach(ticket => {
-                if (stats.hasOwnProperty(ticket.status)) {
-                    stats[ticket.status]++;
-                }
-            });
-
-            return stats;
-        }
-
-        /**
-         * 渲染状态统计
-         */
-        function renderStatusStats() {
-            const stats = getStatusStats();
-            const statsContainer = document.getElementById('statusStats');
-            
-            const statsHtml = Object.entries(stats).map(([status, count]) => {
-                const displayName = STATUS_DISPLAY[status];
-                const cssClass = status;
+            init(container) {
+                this.container = container;
                 
-                return `
-                    <div class="stat-item ${cssClass}">
-                        <span class="stat-label">${displayName}</span>
-                        <span class="stat-count">${count}</span>
-                    </div>
-                `;
-            }).join('');
-            
-            statsContainer.innerHTML = statsHtml;
-        }
+                // 创建场景
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0xf0f0f0);
 
-        /**
-         * 渲染工单列表
-         */
-        function renderTicketList() {
-            const ticketListContainer = document.getElementById('ticketList');
-            
-            const ticketsHtml = ticketData.map(ticket => {
-                const statusDisplay = STATUS_DISPLAY[ticket.status];
-                const statusClass = `status-${ticket.status}`;
-                
-                return `
-                    <div class="ticket-item">
-                        <div class="ticket-info">
-                            <div class="ticket-title">${ticket.title}</div>
-                            <div class="ticket-meta">
-                                工单号: ${ticket.id} | 负责人: ${ticket.assignee} | 更新时间: ${ticket.updateTime}
-                            </div>
-                        </div>
-                        <div class="ticket-status ${statusClass}">
-                            ${statusDisplay}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            ticketListContainer.innerHTML = ticketsHtml;
-        }
+                // 创建相机
+                const aspect = container.clientWidth / container.clientHeight;
+                this.camera = new THREE.OrthographicCamera(
+                    -container.clientWidth / 2, container.clientWidth / 2,
+                    container.clientHeight / 2, -container.clientHeight / 2,
+                    0.1, 1000
+                );
+                this.camera.position.z = 10;
 
-        /**
-         * 刷新数据
-         */
-        function refreshData() {
-            // 模拟数据刷新，这里可以添加从服务器获取数据的逻辑
-            console.log('刷新数据...');
-            
-            // 重新渲染统计和列表，确保数据一致性
-            renderStatusStats();
-            renderTicketList();
-            
-            // 验证数据一致性
-            validateDataConsistency();
-        }
-
-        /**
-         * 验证数据一致性
-         */
-        function validateDataConsistency() {
-            const stats = getStatusStats();
-            
-            // 检查左侧统计和右侧列表的数据是否一致
-            Object.entries(stats).forEach(([status, expectedCount]) => {
-                const actualCount = ticketData.filter(ticket => ticket.status === status).length;
-                
-                if (expectedCount !== actualCount) {
-                    console.error(`数据不一致: ${STATUS_DISPLAY[status]} 统计显示 ${expectedCount}，实际有 ${actualCount}`);
-                } else {
-                    console.log(`数据一致性检查通过: ${STATUS_DISPLAY[status]} ${actualCount} 个`);
-                }
-            });
-        }
-
-        /**
-         * 更新工单状态
-         * @param {string} ticketId 工单ID
-         * @param {string} newStatus 新状态
-         */
-        function updateTicketStatus(ticketId, newStatus) {
-            const ticket = ticketData.find(t => t.id === ticketId);
-            if (ticket && Object.values(TICKET_STATUS).includes(newStatus)) {
-                ticket.status = newStatus;
-                ticket.updateTime = new Date().toLocaleString('zh-CN', {
-                    year: 'numeric',
-                    month: '2-digit', 
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
+                // 创建渲染器
+                this.renderer = new THREE.WebGLRenderer({ 
+                    canvas: container,
+                    antialias: true,
+                    alpha: true
                 });
+                this.renderer.setSize(container.clientWidth, container.clientHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+                // 添加网格
+                this.addGrid();
+
+                this.isInitialized = true;
+                console.log('CanvasRenderer initialized');
+            }
+
+            addGrid() {
+                const gridSize = 10000;
+                const gridStep = 50;
+                const gridGeometry = new THREE.BufferGeometry();
+                const vertices = [];
+
+                // 创建网格线
+                for (let i = -gridSize; i <= gridSize; i += gridStep) {
+                    // 垂直线
+                    vertices.push(i, -gridSize, 0);
+                    vertices.push(i, gridSize, 0);
+                    // 水平线
+                    vertices.push(-gridSize, i, 0);
+                    vertices.push(gridSize, i, 0);
+                }
+
+                gridGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                const gridMaterial = new THREE.LineBasicMaterial({ 
+                    color: 0xcccccc, 
+                    opacity: 0.3, 
+                    transparent: true 
+                });
+                const grid = new THREE.LineSegments(gridGeometry, gridMaterial);
+                this.scene.add(grid);
+            }
+
+            render() {
+                if (!this.isInitialized) return;
+                this.renderer.render(this.scene, this.camera);
+            }
+
+            resize(width, height) {
+                if (!this.isInitialized) return;
                 
-                // 立即更新显示，确保左右两侧数据同步
-                renderStatusStats();
-                renderTicketList();
+                this.camera.left = -width / 2;
+                this.camera.right = width / 2;
+                this.camera.top = height / 2;
+                this.camera.bottom = -height / 2;
+                this.camera.updateProjectionMatrix();
                 
-                console.log(`工单 ${ticketId} 状态已更新为: ${STATUS_DISPLAY[newStatus]}`);
-            } else {
-                console.error(`更新失败: 工单 ${ticketId} 不存在或状态 ${newStatus} 无效`);
+                this.renderer.setSize(width, height);
+            }
+
+            dispose() {
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+                if (this.renderer) {
+                    this.renderer.dispose();
+                }
+                this.isInitialized = false;
+            }
+
+            getScene() {
+                return this.scene;
+            }
+
+            getCamera() {
+                return this.camera;
             }
         }
+
+        // CameraController - 相机控制器
+        class CameraController {
+            constructor(camera) {
+                this.camera = camera;
+                this.zoomMin = 0.1;
+                this.zoomMax = 5.0;
+                this.currentZoom = 1.0;
+                this.panLimits = {
+                    minX: -5000, maxX: 5000,
+                    minY: -5000, maxY: 5000
+                };
+                this.enabled = true;
+            }
+
+            enableControls() {
+                this.enabled = true;
+            }
+
+            disableControls() {
+                this.enabled = false;
+            }
+
+            setZoomLimits(min, max) {
+                this.zoomMin = min;
+                this.zoomMax = max;
+            }
+
+            setPanLimits(bounds) {
+                this.panLimits = bounds;
+            }
+
+            zoom(delta, centerX = 0, centerY = 0) {
+                if (!this.enabled) return;
+
+                const zoomFactor = 1 + delta * 0.1;
+                const newZoom = Math.max(this.zoomMin, Math.min(this.zoomMax, this.currentZoom * zoomFactor));
+                
+                if (newZoom !== this.currentZoom) {
+                    const scale = newZoom / this.currentZoom;
+                    
+                    // 缩放相机视口
+                    this.camera.left *= (1 / scale);
+                    this.camera.right *= (1 / scale);
+                    this.camera.top *= (1 / scale);
+                    this.camera.bottom *= (1 / scale);
+                    
+                    this.camera.updateProjectionMatrix();
+                    this.currentZoom = newZoom;
+                }
+            }
+
+            pan(deltaX, deltaY) {
+                if (!this.enabled) return;
+
+                const panSpeed = 1 / this.currentZoom;
+                const newX = this.camera.position.x - deltaX * panSpeed;
+                const newY = this.camera.position.y + deltaY * panSpeed;
+
+                // 应用边界限制
+                this.camera.position.x = Math.max(this.panLimits.minX, Math.min(this.panLimits.maxX, newX));
+                this.camera.position.y = Math.max(this.panLimits.minY, Math.min(this.panLimits.maxY, newY));
+            }
+
+            resetView() {
+                this.camera.position.set(0, 0, 10);
+                this.currentZoom = 1.0;
+                
+                const container = document.getElementById('canvas');
+                this.camera.left = -container.clientWidth / 2;
+                this.camera.right = container.clientWidth / 2;
+                this.camera.top = container.clientHeight / 2;
+                this.camera.bottom = -container.clientHeight / 2;
+                
+                this.camera.updateProjectionMatrix();
+            }
+
+            getZoom() {
+                return this.currentZoom;
+            }
+
+            getPosition() {
+                return { x: this.camera.position.x, y: this.camera.position.y };
+            }
+        }
+
+        // ViewportManager - 视口管理器
+        class ViewportManager {
+            constructor(camera) {
+                this.camera = camera;
+                this.visibleBounds = { left: 0, right: 0, top: 0, bottom: 0 };
+            }
+
+            updateViewport(camera) {
+                this.camera = camera || this.camera;
+                
+                this.visibleBounds = {
+                    left: this.camera.left + this.camera.position.x,
+                    right: this.camera.right + this.camera.position.x,
+                    top: this.camera.top + this.camera.position.y,
+                    bottom: this.camera.bottom + this.camera.position.y
+                };
+            }
+
+            getVisibleBounds() {
+                return this.visibleBounds;
+            }
+
+            isInViewport(object) {
+                if (!object.position) return false;
+                
+                const pos = object.position;
+                return pos.x >= this.visibleBounds.left && 
+                       pos.x <= this.visibleBounds.right &&
+                       pos.y >= this.visibleBounds.bottom && 
+                       pos.y <= this.visibleBounds.top;
+            }
+
+            optimizeRendering() {
+                // 这里可以实现视口裁剪优化逻辑
+                // 例如隐藏不在视口内的对象
+            }
+        }
+
+        // InteractionHandler - 交互事件处理器
+        class InteractionHandler {
+            constructor(cameraController, viewportManager) {
+                this.cameraController = cameraController;
+                this.viewportManager = viewportManager;
+                this.canvas = null;
+                this.isPointerDown = false;
+                this.lastPointerX = 0;
+                this.lastPointerY = 0;
+                this.pointerType = 'mouse';
+            }
+
+            bindEvents(canvas) {
+                this.canvas = canvas;
+                
+                // 鼠标事件
+                canvas.addEventListener('mousedown', this.onPointerDown.bind(this));
+                canvas.addEventListener('mousemove', this.onPointerMove.bind(this));
+                canvas.addEventListener('mouseup', this.onPointerUp.bind(this));
+                canvas.addEventListener('wheel', this.onWheel.bind(this));
+                
+                // 触摸事件
+                canvas.addEventListener('touchstart', this.onPointerDown.bind(this));
+                canvas.addEventListener('touchmove', this.onPointerMove.bind(this));
+                canvas.addEventListener('touchend', this.onPointerUp.bind(this));
+                
+                // 防止右键菜单
+                canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+            }
+
+            unbindEvents() {
+                if (!this.canvas) return;
+                
+                this.canvas.removeEventListener('mousedown', this.onPointerDown);
+                this.canvas.removeEventListener('mousemove', this.onPointerMove);
+                this.canvas.removeEventListener('mouseup', this.onPointerUp);
+                this.canvas.removeEventListener('wheel', this.onWheel);
+                this.canvas.removeEventListener('touchstart', this.onPointerDown);
+                this.canvas.removeEventListener('touchmove', this.onPointerMove);
+                this.canvas.removeEventListener('touchend', this.onPointerUp);
+            }
+
+            getPointerPosition(event) {
+                if (event.touches && event.touches.length > 0) {
+                    return {
+                        x: event.touches[0].clientX,
+                        y: event.touches[0].clientY
+                    };
+                }
+                return {
+                    x: event.clientX,
+                    y: event.clientY
+                };
+            }
+
+            onPointerDown(event) {
+                event.preventDefault();
+                this.isPointerDown = true;
+                
+                const pos = this.getPointerPosition(event);
+                this.lastPointerX = pos.x;
+                this.lastPointerY = pos.y;
+                
+                this.pointerType = event.type.startsWith('touch') ? 'touch' : 'mouse';
+            }
+
+            onPointerMove(event) {
+                event.preventDefault();
+                
+                if (!this.isPointerDown) return;
+                
+                const pos = this.getPointerPosition(event);
+                const deltaX = pos.x - this.lastPointerX;
+                const deltaY = pos.y - this.lastPointerY;
+                
+                this.cameraController.pan(deltaX, deltaY);
+                this.viewportManager.updateViewport();
+                
+                this.lastPointerX = pos.x;
+                this.lastPointerY = pos.y;
+            }
+
+            onPointerUp(event) {
+                event.preventDefault();
+                this.isPointerDown = false;
+            }
+
+            onWheel(event) {
+                event.preventDefault();
+                
+                const delta = event.deltaY > 0 ? -1 : 1;
+                this.cameraController.zoom(delta);
+                this.viewportManager.updateViewport();
+            }
+        }
+
+        // CanvasApp - 画布应用主控制器
+        class CanvasApp {
+            constructor() {
+                this.renderer = new CanvasRenderer();
+                this.cameraController = null;
+                this.viewportManager = null;
+                this.interactionHandler = null;
+                this.isRunning = false;
+                this.frameCount = 0;
+                this.lastTime = 0;
+                this.fps = 60;
+                this.testNodes = [];
+            }
+
+            initialize() {
+                const canvas = document.getElementById('canvas');
+                if (!canvas) {
+                    console.error('Canvas element not found');
+                    return false;
+                }
+
+                // 初始化渲染器
+                this.renderer.init(canvas);
+                
+                // 初始化控制器
+                this.cameraController = new CameraController(this.renderer.getCamera());
+                this.viewportManager = new ViewportManager(this.renderer.getCamera());
+                this.interactionHandler = new InteractionHandler(this.cameraController, this.viewportManager);
+                
+                // 绑定事件
+                this.interactionHandler.bindEvents(canvas);
+                
+                // 监听窗口大小变化
+                window.addEventListener('resize', this.handleResize.bind(this));
+                
+                console.log('CanvasApp initialized');
+                return true;
+            }
+
+            start() {
+                if (this.isRunning) return;
+                
+                this.isRunning = true;
+                this.lastTime = performance.now();
+                this.animate();
+                console.log('CanvasApp started');
+            }
+
+            stop() {
+                this.isRunning = false;
+                console.log('CanvasApp stopped');
+            }
+
+            animate() {
+                if (!this.isRunning) return;
+                
+                const currentTime = performance.now();
+                const deltaTime = currentTime - this.lastTime;
+                
+                // 计算FPS
+                this.frameCount++;
+                if (this.frameCount % 60 === 0) {
+                    this.fps = Math.round(1000 / deltaTime);
+                    this.updateInfo();
+                }
+                
+                // 更新视口
+                this.viewportManager.updateViewport();
+                
+                // 渲染
+                this.renderer.render();
+                
+                this.lastTime = currentTime;
+                requestAnimationFrame(this.animate.bind(this));
+            }
+
+            handleResize() {
+                const canvas = document.getElementById('canvas');
+                const container = canvas.parentElement;
+                this.renderer.resize(container.clientWidth, container.clientHeight);
+            }
+
+            updateInfo() {
+                const zoomInfo = document.getElementById('zoom-info');
+                const positionInfo = document.getElementById('position-info');
+                const fpsInfo = document.getElementById('fps-info');
+                
+                if (zoomInfo) {
+                    zoomInfo.textContent = this.cameraController.getZoom().toFixed(2);
+                }
+                
+                if (positionInfo) {
+                    const pos = this.cameraController.getPosition();
+                    positionInfo.textContent = `(${Math.round(pos.x)}, ${Math.round(pos.y)})`;
+                }
+                
+                if (fpsInfo) {
+                    fpsInfo.textContent = this.fps;
+                }
+            }
+
+            addTestNode(type) {
+                const scene = this.renderer.getScene();
+                const colors = {
+                    input: 0x4CAF50,
+                    process: 0x2196F3,
+                    output: 0xFF9800
+                };
+                
+                // 创建节点几何体
+                const geometry = new THREE.BoxGeometry(100, 60, 10);
+                const material = new THREE.MeshBasicMaterial({ color: colors[type] || 0x666666 });
+                const node = new THREE.Mesh(geometry, material);
+                
+                // 随机位置
+                const pos = this.cameraController.getPosition();
+                node.position.set(
+                    pos.x + (Math.random() - 0.5) * 400,
+                    pos.y + (Math.random() - 0.5) * 400,
+                    0
+                );
+                
+                scene.add(node);
+                this.testNodes.push(node);
+                
+                console.log(`Added ${type} node at`, node.position);
+            }
+
+            resetView() {
+                this.cameraController.resetView();
+                this.viewportManager.updateViewport();
+            }
+
+            getRenderer() {
+                return this.renderer;
+            }
+
+            getCamera() {
+                return this.renderer.getCamera();
+            }
+        }
+
+        // 全局应用实例
+        let canvasApp;
 
         // 页面加载完成后初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('工单管理系统初始化...');
+        document.addEventListener('DOMContentLoaded', () => {
+            canvasApp = new CanvasApp();
             
-            // 初始渲染
-            renderStatusStats();
-            renderTicketList();
-            
-            // 验证初始数据一致性
-            validateDataConsistency();
-            
-            console.log('系统初始化完成');
+            if (canvasApp.initialize()) {
+                canvasApp.start();
+                
+                // 添加一些测试节点
+                setTimeout(() => {
+                    canvasApp.addTestNode('input');
+                    canvasApp.addTestNode('process');
+                    canvasApp.addTestNode('output');
+                }, 500);
+            }
         });
 
-        // 暴露全局方法供调试使用
-        window.ticketSystem = {
-            updateTicketStatus,
-            refreshData,
-            validateDataConsistency,
-            getStatusStats,
-            ticketData
-        };
+        // 页面卸载时清理资源
+        window.addEventListener('beforeunload', () => {
+            if (canvasApp) {
+                canvasApp.stop();
+                canvasApp.renderer.dispose();
+            }
+        });
     </script>
 </body>
 </html>
