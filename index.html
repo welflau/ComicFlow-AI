@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>节点系统工作流画布 - 性能优化版</title>
+    <title>节点系统工作流画布 - 实时协作</title>
     <script src="https://unpkg.com/three@0.155.0/build/three.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <style>
@@ -72,41 +72,82 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
-        .performance-controls {
+        .collaboration-panel {
             display: flex;
-            gap: 10px;
             align-items: center;
+            gap: 15px;
             margin-left: auto;
         }
 
-        .performance-toggle {
-            padding: 6px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            background: white;
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .connection-status.connected {
+            background: rgba(76, 175, 80, 0.1);
+            color: #4CAF50;
+        }
+
+        .connection-status.disconnected {
+            background: rgba(244, 67, 54, 0.1);
+            color: #f44336;
+        }
+
+        .connection-status.connecting {
+            background: rgba(255, 152, 0, 0.1);
+            color: #FF9800;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .online-users {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            position: relative;
             cursor: pointer;
-            font-size: 12px;
-            transition: all 0.3s ease;
         }
 
-        .performance-toggle.active {
-            background: #4CAF50;
-            color: white;
-            border-color: #4CAF50;
-        }
-
-        .performance-stats {
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 10px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 12px;
+        .user-avatar::after {
+            content: '';
             position: absolute;
-            top: 80px;
-            right: 20px;
-            z-index: 1000;
-            min-width: 200px;
+            bottom: -2px;
+            right: -2px;
+            width: 10px;
+            height: 10px;
+            background: #4CAF50;
+            border: 2px solid white;
+            border-radius: 50%;
         }
 
         .canvas-container {
@@ -115,789 +156,1052 @@
             overflow: hidden;
         }
 
-        #canvas {
+        .canvas {
             width: 100%;
             height: 100%;
-            display: block;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            position: relative;
         }
 
-        .test-controls {
+        .node {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 15px;
-            border-radius: 8px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .test-button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            background: #2196F3;
-            color: white;
+            min-width: 120px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            cursor: move;
             transition: all 0.3s ease;
+            z-index: 10;
         }
 
-        .test-button:hover {
-            background: #1976D2;
+        .node:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
         }
 
-        .node-count-input {
-            padding: 6px 10px;
+        .node.selected {
+            border: 2px solid #2196F3;
+            box-shadow: 0 0 20px rgba(33, 150, 243, 0.3);
+        }
+
+        .node.remote-editing {
+            border: 2px solid #FF9800;
+            box-shadow: 0 0 20px rgba(255, 152, 0, 0.3);
+        }
+
+        .node-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .node-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .node-type {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: white;
+            font-weight: 500;
+        }
+
+        .node-content {
+            padding: 16px;
+        }
+
+        .node-input, .node-output {
+            margin: 8px 0;
+        }
+
+        .node-input label, .node-output label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .node-input input, .node-input select {
+            width: 100%;
+            padding: 6px 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            width: 80px;
-            text-align: center;
+            font-size: 12px;
+        }
+
+        .connection-point {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #2196F3;
+            border: 2px solid white;
+            cursor: crosshair;
+            z-index: 20;
+        }
+
+        .connection-point.input {
+            left: -6px;
+        }
+
+        .connection-point.output {
+            right: -6px;
+        }
+
+        .connection-point:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
+        }
+
+        .connection {
+            position: absolute;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .connection-line {
+            stroke: #2196F3;
+            stroke-width: 2;
+            fill: none;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+
+        .connection.remote {
+            opacity: 0.7;
+        }
+
+        .connection.remote .connection-line {
+            stroke: #FF9800;
+            stroke-dasharray: 5,5;
+        }
+
+        .user-cursor {
+            position: absolute;
+            pointer-events: none;
+            z-index: 1000;
+            transition: all 0.1s ease;
+        }
+
+        .cursor-pointer {
+            width: 20px;
+            height: 20px;
+            background: #FF9800;
+            border-radius: 50% 0 50% 50%;
+            transform: rotate(-45deg);
+            position: relative;
+        }
+
+        .cursor-label {
+            position: absolute;
+            top: 25px;
+            left: 0;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            transform: rotate(45deg);
+        }
+
+        .operation-feedback {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .canvas-id-display {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: monospace;
         }
     </style>
 </head>
 <body>
     <div class="app-container">
         <div class="toolbar">
-            <h1>高性能节点画布</h1>
-            <button class="node-button input-node-btn" onclick="canvasSystem.addRandomNodes(1, 'input')">添加输入节点</button>
-            <button class="node-button process-node-btn" onclick="canvasSystem.addRandomNodes(1, 'process')">添加处理节点</button>
-            <button class="node-button output-node-btn" onclick="canvasSystem.addRandomNodes(1, 'output')">添加输出节点</button>
+            <h1>节点系统工作流画布</h1>
+            <button class="node-button input-node-btn" onclick="addNode('input')">输入节点</button>
+            <button class="node-button process-node-btn" onclick="addNode('process')">处理节点</button>
+            <button class="node-button output-node-btn" onclick="addNode('output')">输出节点</button>
             
-            <div class="performance-controls">
-                <button class="performance-toggle" id="lodToggle" onclick="toggleLOD()">LOD优化</button>
-                <button class="performance-toggle" id="cullingToggle" onclick="toggleCulling()">视口裁剪</button>
-                <button class="performance-toggle" id="batchingToggle" onclick="toggleBatching()">批量渲染</button>
-                <button class="performance-toggle active" id="monitoringToggle" onclick="toggleMonitoring()">性能监控</button>
+            <div class="collaboration-panel">
+                <div class="connection-status" id="connectionStatus">
+                    <div class="status-dot"></div>
+                    <span id="statusText">连接中...</span>
+                </div>
+                <div class="online-users" id="onlineUsers"></div>
             </div>
         </div>
-
-        <div class="performance-stats" id="performanceStats"></div>
-
+        
         <div class="canvas-container">
-            <canvas id="canvas"></canvas>
+            <div class="canvas" id="canvas"></div>
         </div>
-
-        <div class="test-controls">
-            <label>节点数量:</label>
-            <input type="number" class="node-count-input" id="nodeCountInput" value="100" min="1" max="5000">
-            <button class="test-button" onclick="performanceTest()">性能测试</button>
-            <button class="test-button" onclick="clearAllNodes()">清空画布</button>
-            <button class="test-button" onclick="generateReport()">生成报告</button>
-        </div>
+        
+        <div class="canvas-id-display" id="canvasIdDisplay"></div>
     </div>
 
     <script>
-        // 性能管理器
-        class PerformanceManager {
+        // WebSocket管理器
+        class WebSocketManager {
             constructor() {
-                this.isMonitoring = true;
-                this.metrics = {
-                    fps: 0,
-                    frameTime: 0,
-                    drawCalls: 0,
-                    nodeCount: 0,
-                    visibleNodes: 0,
-                    memoryUsage: 0
+                this.socket = null;
+                this.isConnected = false;
+                this.messageCallbacks = [];
+                this.connectionCallbacks = [];
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+            }
+
+            connect(url = 'ws://localhost:3000') {
+                try {
+                    // 尝试使用Socket.IO
+                    if (typeof io !== 'undefined') {
+                        this.socket = io(url);
+                        this.setupSocketIOEvents();
+                    } else {
+                        // 回退到原生WebSocket
+                        this.socket = new WebSocket(url);
+                        this.setupWebSocketEvents();
+                    }
+                } catch (error) {
+                    console.error('WebSocket连接失败:', error);
+                    this.handleConnectionError();
+                }
+            }
+
+            setupSocketIOEvents() {
+                this.socket.on('connect', () => {
+                    this.isConnected = true;
+                    this.reconnectAttempts = 0;
+                    this.notifyConnectionChange('connected');
+                });
+
+                this.socket.on('disconnect', () => {
+                    this.isConnected = false;
+                    this.notifyConnectionChange('disconnected');
+                    this.attemptReconnect();
+                });
+
+                this.socket.on('message', (data) => {
+                    this.notifyMessage(data);
+                });
+
+                this.socket.on('error', (error) => {
+                    console.error('Socket.IO错误:', error);
+                    this.handleConnectionError();
+                });
+            }
+
+            setupWebSocketEvents() {
+                this.socket.onopen = () => {
+                    this.isConnected = true;
+                    this.reconnectAttempts = 0;
+                    this.notifyConnectionChange('connected');
                 };
-                this.frameCount = 0;
-                this.lastTime = performance.now();
-                this.fpsHistory = [];
+
+                this.socket.onclose = () => {
+                    this.isConnected = false;
+                    this.notifyConnectionChange('disconnected');
+                    this.attemptReconnect();
+                };
+
+                this.socket.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    this.notifyMessage(data);
+                };
+
+                this.socket.onerror = (error) => {
+                    console.error('WebSocket错误:', error);
+                    this.handleConnectionError();
+                };
             }
 
-            startMonitoring() {
-                this.isMonitoring = true;
-                this.updateMetrics();
-            }
-
-            stopMonitoring() {
-                this.isMonitoring = false;
-            }
-
-            updateMetrics() {
-                if (!this.isMonitoring) return;
-
-                const now = performance.now();
-                const deltaTime = now - this.lastTime;
-                
-                this.frameCount++;
-                
-                if (deltaTime >= 1000) {
-                    this.metrics.fps = Math.round((this.frameCount * 1000) / deltaTime);
-                    this.metrics.frameTime = Math.round(deltaTime / this.frameCount * 100) / 100;
-                    
-                    this.fpsHistory.push(this.metrics.fps);
-                    if (this.fpsHistory.length > 60) {
-                        this.fpsHistory.shift();
+            disconnect() {
+                if (this.socket) {
+                    this.isConnected = false;
+                    if (typeof this.socket.disconnect === 'function') {
+                        this.socket.disconnect();
+                    } else {
+                        this.socket.close();
                     }
-                    
-                    this.frameCount = 0;
-                    this.lastTime = now;
-                    
-                    // 更新内存使用情况
-                    if (performance.memory) {
-                        this.metrics.memoryUsage = Math.round(performance.memory.usedJSHeapSize / 1024 / 1024);
+                }
+            }
+
+            sendMessage(type, data) {
+                if (!this.isConnected || !this.socket) {
+                    console.warn('WebSocket未连接，无法发送消息');
+                    return false;
+                }
+
+                const message = { type, data, timestamp: Date.now() };
+                
+                try {
+                    if (typeof this.socket.emit === 'function') {
+                        this.socket.emit('message', message);
+                    } else {
+                        this.socket.send(JSON.stringify(message));
                     }
-                    
-                    this.displayMetrics();
+                    return true;
+                } catch (error) {
+                    console.error('发送消息失败:', error);
+                    return false;
                 }
-                
-                requestAnimationFrame(() => this.updateMetrics());
             }
 
-            getPerformanceMetrics() {
-                return { ...this.metrics };
+            onMessage(callback) {
+                this.messageCallbacks.push(callback);
             }
 
-            displayMetrics() {
-                const statsElement = document.getElementById('performanceStats');
-                if (!statsElement || !this.isMonitoring) return;
-
-                const avgFps = this.fpsHistory.length > 0 ? 
-                    Math.round(this.fpsHistory.reduce((a, b) => a + b, 0) / this.fpsHistory.length) : 0;
-                
-                statsElement.innerHTML = `
-                    <div><strong>性能监控</strong></div>
-                    <div>FPS: ${this.metrics.fps} (平均: ${avgFps})</div>
-                    <div>帧时间: ${this.metrics.frameTime}ms</div>
-                    <div>绘制调用: ${this.metrics.drawCalls}</div>
-                    <div>节点总数: ${this.metrics.nodeCount}</div>
-                    <div>可见节点: ${this.metrics.visibleNodes}</div>
-                    <div>内存使用: ${this.metrics.memoryUsage}MB</div>
-                `;
+            onConnectionChange(callback) {
+                this.connectionCallbacks.push(callback);
             }
 
-            optimizeRenderingStrategy() {
-                const fps = this.metrics.fps;
-                if (fps < 30) {
-                    // 启用所有优化
-                    canvasSystem.enableLOD();
-                    canvasSystem.enableCulling();
-                    canvasSystem.enableBatching();
-                } else if (fps < 45) {
-                    // 启用部分优化
-                    canvasSystem.enableLOD();
-                    canvasSystem.enableCulling();
+            notifyMessage(data) {
+                this.messageCallbacks.forEach(callback => {
+                    try {
+                        callback(data);
+                    } catch (error) {
+                        console.error('消息回调执行失败:', error);
+                    }
+                });
+            }
+
+            notifyConnectionChange(status) {
+                this.connectionCallbacks.forEach(callback => {
+                    try {
+                        callback(status);
+                    } catch (error) {
+                        console.error('连接状态回调执行失败:', error);
+                    }
+                });
+            }
+
+            attemptReconnect() {
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.reconnectAttempts++;
+                    this.notifyConnectionChange('connecting');
+                    setTimeout(() => {
+                        this.connect();
+                    }, 2000 * this.reconnectAttempts);
                 }
+            }
+
+            handleConnectionError() {
+                this.isConnected = false;
+                this.notifyConnectionChange('disconnected');
             }
         }
 
-        // 节点对象池管理器
-        class NodePoolManager {
-            constructor() {
-                this.pools = {
-                    input: [],
-                    process: [],
-                    output: []
-                };
-                this.maxPoolSize = 100;
-            }
-
-            getNode(type) {
-                const pool = this.pools[type];
-                if (pool && pool.length > 0) {
-                    return pool.pop();
-                }
-                return this.createNewNode(type);
-            }
-
-            releaseNode(node) {
-                const type = node.userData.type;
-                const pool = this.pools[type];
-                if (pool && pool.length < this.maxPoolSize) {
-                    // 重置节点状态
-                    node.position.set(0, 0, 0);
-                    node.visible = false;
-                    pool.push(node);
-                    return true;
-                }
-                return false;
-            }
-
-            createNewNode(type) {
-                const colors = {
-                    input: 0x4CAF50,
-                    process: 0x2196F3,
-                    output: 0xFF9800
-                };
-
-                const geometry = new THREE.BoxGeometry(2, 1, 0.5);
-                const material = new THREE.MeshBasicMaterial({ color: colors[type] });
-                const node = new THREE.Mesh(geometry, material);
+        // 协作管理器
+        class CollaborationManager {
+            constructor(wsManager) {
+                this.wsManager = wsManager;
+                this.canvasId = null;
+                this.userId = this.generateUserId();
+                this.userName = this.generateUserName();
+                this.userColor = this.generateUserColor();
+                this.onlineUsers = new Map();
+                this.userCursors = new Map();
                 
-                node.userData = {
-                    type: type,
-                    id: Math.random().toString(36).substr(2, 9),
-                    lodLevel: 0,
-                    isVisible: true
-                };
+                this.setupMessageHandlers();
+            }
 
+            generateUserId() {
+                return 'user_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            generateUserName() {
+                const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry'];
+                return names[Math.floor(Math.random() * names.length)];
+            }
+
+            generateUserColor() {
+                const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+
+            setupMessageHandlers() {
+                this.wsManager.onMessage((message) => {
+                    this.handleMessage(message);
+                });
+            }
+
+            joinCanvas(canvasId) {
+                this.canvasId = canvasId;
+                this.wsManager.sendMessage('join_canvas', {
+                    canvasId,
+                    userId: this.userId,
+                    userName: this.userName,
+                    userColor: this.userColor
+                });
+            }
+
+            leaveCanvas() {
+                if (this.canvasId) {
+                    this.wsManager.sendMessage('leave_canvas', {
+                        canvasId: this.canvasId,
+                        userId: this.userId
+                    });
+                    this.canvasId = null;
+                }
+            }
+
+            broadcastOperation(operation) {
+                if (!this.canvasId) return;
+                
+                this.wsManager.sendMessage('canvas_operation', {
+                    canvasId: this.canvasId,
+                    userId: this.userId,
+                    operation
+                });
+            }
+
+            broadcastCursorPosition(x, y) {
+                if (!this.canvasId) return;
+                
+                this.wsManager.sendMessage('cursor_position', {
+                    canvasId: this.canvasId,
+                    userId: this.userId,
+                    position: { x, y }
+                });
+            }
+
+            handleMessage(message) {
+                switch (message.type) {
+                    case 'user_joined':
+                        this.handleUserJoined(message.data);
+                        break;
+                    case 'user_left':
+                        this.handleUserLeft(message.data);
+                        break;
+                    case 'users_list':
+                        this.handleUsersList(message.data);
+                        break;
+                    case 'canvas_operation':
+                        this.handleRemoteOperation(message.data);
+                        break;
+                    case 'cursor_position':
+                        this.handleCursorPosition(message.data);
+                        break;
+                }
+            }
+
+            handleUserJoined(data) {
+                this.onlineUsers.set(data.userId, data);
+                canvasCollaborationUI.showOnlineUsers(Array.from(this.onlineUsers.values()));
+                canvasCollaborationUI.showOperationFeedback(`${data.userName} 加入了协作`);
+            }
+
+            handleUserLeft(data) {
+                this.onlineUsers.delete(data.userId);
+                canvasCollaborationUI.hideUserCursor(data.userId);
+                canvasCollaborationUI.showOnlineUsers(Array.from(this.onlineUsers.values()));
+                canvasCollaborationUI.showOperationFeedback(`${data.userName} 离开了协作`);
+            }
+
+            handleUsersList(data) {
+                this.onlineUsers.clear();
+                data.users.forEach(user => {
+                    if (user.userId !== this.userId) {
+                        this.onlineUsers.set(user.userId, user);
+                    }
+                });
+                canvasCollaborationUI.showOnlineUsers(Array.from(this.onlineUsers.values()));
+            }
+
+            handleRemoteOperation(data) {
+                if (data.userId === this.userId) return;
+                
+                operationSynchronizer.applyRemoteOperation(data.operation);
+                
+                const user = this.onlineUsers.get(data.userId);
+                const userName = user ? user.userName : '其他用户';
+                canvasCollaborationUI.showOperationFeedback(`${userName} 执行了操作: ${data.operation.type}`);
+            }
+
+            handleCursorPosition(data) {
+                if (data.userId === this.userId) return;
+                
+                const user = this.onlineUsers.get(data.userId);
+                if (user) {
+                    canvasCollaborationUI.showUserCursor(data.userId, data.position, user);
+                }
+            }
+
+            getUserList() {
+                return Array.from(this.onlineUsers.values());
+            }
+        }
+
+        // 画布协作UI
+        class CanvasCollaborationUI {
+            constructor() {
+                this.connectionStatusEl = document.getElementById('connectionStatus');
+                this.statusTextEl = document.getElementById('statusText');
+                this.onlineUsersEl = document.getElementById('onlineUsers');
+                this.canvasIdDisplayEl = document.getElementById('canvasIdDisplay');
+                this.userCursors = new Map();
+            }
+
+            updateConnectionStatus(status) {
+                this.connectionStatusEl.className = `connection-status ${status}`;
+                
+                switch (status) {
+                    case 'connected':
+                        this.statusTextEl.textContent = '已连接';
+                        break;
+                    case 'connecting':
+                        this.statusTextEl.textContent = '连接中...';
+                        break;
+                    case 'disconnected':
+                        this.statusTextEl.textContent = '已断开';
+                        break;
+                }
+            }
+
+            showOnlineUsers(users) {
+                this.onlineUsersEl.innerHTML = '';
+                
+                users.forEach(user => {
+                    const avatar = document.createElement('div');
+                    avatar.className = 'user-avatar';
+                    avatar.style.background = user.userColor;
+                    avatar.textContent = user.userName.charAt(0).toUpperCase();
+                    avatar.title = user.userName;
+                    
+                    this.onlineUsersEl.appendChild(avatar);
+                });
+            }
+
+            showUserCursor(userId, position, user) {
+                let cursor = this.userCursors.get(userId);
+                
+                if (!cursor) {
+                    cursor = document.createElement('div');
+                    cursor.className = 'user-cursor';
+                    cursor.innerHTML = `
+                        <div class="cursor-pointer" style="background: ${user.userColor}"></div>
+                        <div class="cursor-label">${user.userName}</div>
+                    `;
+                    document.body.appendChild(cursor);
+                    this.userCursors.set(userId, cursor);
+                }
+                
+                cursor.style.left = position.x + 'px';
+                cursor.style.top = position.y + 'px';
+            }
+
+            hideUserCursor(userId) {
+                const cursor = this.userCursors.get(userId);
+                if (cursor) {
+                    cursor.remove();
+                    this.userCursors.delete(userId);
+                }
+            }
+
+            showOperationFeedback(message) {
+                const feedback = document.createElement('div');
+                feedback.className = 'operation-feedback';
+                feedback.textContent = message;
+                
+                document.body.appendChild(feedback);
+                
+                setTimeout(() => {
+                    feedback.remove();
+                }, 3000);
+            }
+
+            displayCanvasId(canvasId) {
+                this.canvasIdDisplayEl.textContent = `画布ID: ${canvasId}`;
+            }
+        }
+
+        // 操作同步器
+        class OperationSynchronizer {
+            constructor() {
+                this.pendingOperations = new Map();
+                this.operationHistory = [];
+            }
+
+            syncNodeOperation(nodeId, operation) {
+                const syncOperation = {
+                    type: 'node_operation',
+                    nodeId,
+                    operation,
+                    timestamp: Date.now()
+                };
+                
+                collaborationManager.broadcastOperation(syncOperation);
+                this.operationHistory.push(syncOperation);
+            }
+
+            syncConnectionOperation(connectionId, operation) {
+                const syncOperation = {
+                    type: 'connection_operation',
+                    connectionId,
+                    operation,
+                    timestamp: Date.now()
+                };
+                
+                collaborationManager.broadcastOperation(syncOperation);
+                this.operationHistory.push(syncOperation);
+            }
+
+            applyRemoteOperation(operation) {
+                switch (operation.type) {
+                    case 'node_operation':
+                        this.applyNodeOperation(operation);
+                        break;
+                    case 'connection_operation':
+                        this.applyConnectionOperation(operation);
+                        break;
+                    case 'node_add':
+                        this.applyNodeAdd(operation);
+                        break;
+                    case 'node_delete':
+                        this.applyNodeDelete(operation);
+                        break;
+                }
+            }
+
+            applyNodeOperation(operation) {
+                const node = document.getElementById(operation.nodeId);
+                if (!node) return;
+                
+                switch (operation.operation.type) {
+                    case 'move':
+                        node.style.left = operation.operation.x + 'px';
+                        node.style.top = operation.operation.y + 'px';
+                        break;
+                    case 'update':
+                        this.updateNodeContent(node, operation.operation.data);
+                        break;
+                }
+                
+                // 添加远程编辑标识
+                node.classList.add('remote-editing');
+                setTimeout(() => {
+                    node.classList.remove('remote-editing');
+                }, 1000);
+            }
+
+            applyConnectionOperation(operation) {
+                // 处理连接操作
+                console.log('应用连接操作:', operation);
+            }
+
+            applyNodeAdd(operation) {
+                const nodeData = operation.nodeData;
+                const node = this.createRemoteNode(nodeData);
+                document.getElementById('canvas').appendChild(node);
+            }
+
+            applyNodeDelete(operation) {
+                const node = document.getElementById(operation.nodeId);
+                if (node) {
+                    node.remove();
+                }
+            }
+
+            createRemoteNode(nodeData) {
+                const node = document.createElement('div');
+                node.className = 'node';
+                node.id = nodeData.id;
+                node.style.left = nodeData.x + 'px';
+                node.style.top = nodeData.y + 'px';
+                
+                node.innerHTML = `
+                    <div class="node-header">
+                        <span class="node-title">${nodeData.title}</span>
+                        <span class="node-type" style="background: ${this.getNodeTypeColor(nodeData.type)}">
+                            ${nodeData.type}
+                        </span>
+                    </div>
+                    <div class="node-content">
+                        ${this.generateNodeContent(nodeData)}
+                    </div>
+                `;
+                
                 return node;
             }
 
-            preloadNodes(count) {
-                const types = ['input', 'process', 'output'];
-                types.forEach(type => {
-                    for (let i = 0; i < count; i++) {
-                        const node = this.createNewNode(type);
-                        this.pools[type].push(node);
+            updateNodeContent(node, data) {
+                const inputs = node.querySelectorAll('input, select, textarea');
+                inputs.forEach(input => {
+                    if (data[input.name]) {
+                        input.value = data[input.name];
                     }
                 });
             }
 
-            cleanupPool() {
-                Object.values(this.pools).forEach(pool => {
-                    pool.forEach(node => {
-                        if (node.geometry) node.geometry.dispose();
-                        if (node.material) node.material.dispose();
-                    });
-                    pool.length = 0;
-                });
-            }
-        }
-
-        // 视口裁剪器
-        class ViewportCuller {
-            constructor() {
-                this.frustum = new THREE.Frustum();
-                this.cameraMatrix = new THREE.Matrix4();
-                this.enabled = false;
-            }
-
-            updateViewport(camera) {
-                if (!this.enabled) return;
-                this.cameraMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-                this.frustum.setFromProjectionMatrix(this.cameraMatrix);
-            }
-
-            cullNodes(nodeList) {
-                if (!this.enabled) {
-                    return nodeList.filter(node => node.visible);
-                }
-
-                const visibleNodes = [];
-                nodeList.forEach(node => {
-                    if (this.isNodeVisible(node)) {
-                        node.visible = true;
-                        visibleNodes.push(node);
-                    } else {
-                        node.visible = false;
-                    }
-                });
-                return visibleNodes;
-            }
-
-            isNodeVisible(node) {
-                if (!this.enabled) return true;
-                const boundingBox = this.getBoundingBox(node);
-                return this.frustum.intersectsBox(boundingBox);
-            }
-
-            getBoundingBox(node) {
-                const box = new THREE.Box3();
-                box.setFromObject(node);
-                return box;
-            }
-        }
-
-        // LOD控制器
-        class LODController {
-            constructor() {
-                this.enabled = false;
-                this.lodDistances = [10, 25, 50]; // 不同LOD级别的距离阈值
-            }
-
-            updateLOD(camera, nodes) {
-                if (!this.enabled) return;
-
-                nodes.forEach(node => {
-                    const distance = this.calculateDistance(node, camera);
-                    const lodLevel = this.getLODLevel(distance);
-                    this.setLODLevel(node, lodLevel);
-                });
-            }
-
-            calculateDistance(node, camera) {
-                return node.position.distanceTo(camera.position);
-            }
-
-            getLODLevel(distance) {
-                if (distance < this.lodDistances[0]) return 0; // 高细节
-                if (distance < this.lodDistances[1]) return 1; // 中细节
-                if (distance < this.lodDistances[2]) return 2; // 低细节
-                return 3; // 最低细节
-            }
-
-            setLODLevel(node, level) {
-                if (node.userData.lodLevel === level) return;
-                
-                node.userData.lodLevel = level;
-                
-                // 根据LOD级别调整节点复杂度
-                switch (level) {
-                    case 0: // 高细节
-                        node.scale.set(1, 1, 1);
-                        if (node.material) node.material.wireframe = false;
-                        break;
-                    case 1: // 中细节
-                        node.scale.set(0.8, 0.8, 0.8);
-                        if (node.material) node.material.wireframe = false;
-                        break;
-                    case 2: // 低细节
-                        node.scale.set(0.6, 0.6, 0.6);
-                        if (node.material) node.material.wireframe = true;
-                        break;
-                    case 3: // 最低细节
-                        node.scale.set(0.4, 0.4, 0.4);
-                        if (node.material) node.material.wireframe = true;
-                        break;
-                }
-            }
-        }
-
-        // 批量渲染器
-        class BatchRenderer {
-            constructor() {
-                this.batches = {
-                    input: [],
-                    process: [],
-                    output: []
-                };
-                this.enabled = false;
-                this.instancedMeshes = {};
-            }
-
-            addToBatch(node) {
-                if (!this.enabled) return;
-                const type = node.userData.type;
-                if (this.batches[type]) {
-                    this.batches[type].push(node);
-                }
-            }
-
-            renderBatch(nodeType) {
-                if (!this.enabled) return;
-                const batch = this.batches[nodeType];
-                if (!batch || batch.length === 0) return;
-
-                // 创建实例化网格
-                if (!this.instancedMeshes[nodeType]) {
-                    this.createInstancedMesh(nodeType, batch.length);
-                }
-
-                // 更新实例化网格的变换矩阵
-                const instancedMesh = this.instancedMeshes[nodeType];
-                batch.forEach((node, index) => {
-                    if (index < instancedMesh.count) {
-                        const matrix = new THREE.Matrix4();
-                        matrix.compose(node.position, node.quaternion, node.scale);
-                        instancedMesh.setMatrixAt(index, matrix);
-                    }
-                });
-                instancedMesh.instanceMatrix.needsUpdate = true;
-            }
-
-            createInstancedMesh(nodeType, count) {
+            getNodeTypeColor(type) {
                 const colors = {
-                    input: 0x4CAF50,
-                    process: 0x2196F3,
-                    output: 0xFF9800
+                    'input': '#4CAF50',
+                    'process': '#2196F3',
+                    'output': '#FF9800'
                 };
-
-                const geometry = new THREE.BoxGeometry(2, 1, 0.5);
-                const material = new THREE.MeshBasicMaterial({ color: colors[nodeType] });
-                const instancedMesh = new THREE.InstancedMesh(geometry, material, count);
-                
-                this.instancedMeshes[nodeType] = instancedMesh;
-                canvasSystem.scene.add(instancedMesh);
+                return colors[type] || '#666';
             }
 
-            clearBatch() {
-                Object.keys(this.batches).forEach(type => {
-                    this.batches[type] = [];
-                });
+            generateNodeContent(nodeData) {
+                // 根据节点类型生成内容
+                switch (nodeData.type) {
+                    case 'input':
+                        return `
+                            <div class="node-input">
+                                <label>数据源</label>
+                                <select name="dataSource">
+                                    <option value="file">文件</option>
+                                    <option value="api">API</option>
+                                    <option value="database">数据库</option>
+                                </select>
+                            </div>
+                        `;
+                    case 'process':
+                        return `
+                            <div class="node-input">
+                                <label>处理类型</label>
+                                <select name="processType">
+                                    <option value="filter">过滤</option>
+                                    <option value="transform">转换</option>
+                                    <option value="aggregate">聚合</option>
+                                </select>
+                            </div>
+                        `;
+                    case 'output':
+                        return `
+                            <div class="node-input">
+                                <label>输出格式</label>
+                                <select name="outputFormat">
+                                    <option value="json">JSON</option>
+                                    <option value="csv">CSV</option>
+                                    <option value="xml">XML</option>
+                                </select>
+                            </div>
+                        `;
+                    default:
+                        return '<div>未知节点类型</div>';
+                }
             }
 
-            optimizeBatches() {
-                // 清理未使用的实例化网格
-                Object.keys(this.instancedMeshes).forEach(type => {
-                    const mesh = this.instancedMeshes[type];
-                    const batch = this.batches[type];
-                    if (!batch || batch.length === 0) {
-                        canvasSystem.scene.remove(mesh);
-                        delete this.instancedMeshes[type];
-                    }
-                });
+            resolveConflict(localOp, remoteOp) {
+                // 简单的冲突解决策略：时间戳优先
+                return remoteOp.timestamp > localOp.timestamp ? remoteOp : localOp;
             }
         }
 
-        // 性能分析器
-        class PerformanceProfiler {
-            constructor() {
-                this.isProfilering = false;
-                this.profileData = [];
-                this.testResults = [];
-            }
+        // 全局变量
+        let wsManager;
+        let collaborationManager;
+        let canvasCollaborationUI;
+        let operationSynchronizer;
+        let nodeCounter = 0;
+        let selectedNode = null;
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
 
-            startProfiling() {
-                this.isProfilering = true;
-                this.profileData = [];
-                console.log('开始性能分析...');
-            }
+        // 初始化
+        function init() {
+            // 创建实例
+            wsManager = new WebSocketManager();
+            canvasCollaborationUI = new CanvasCollaborationUI();
+            collaborationManager = new CollaborationManager(wsManager);
+            operationSynchronizer = new OperationSynchronizer();
+            
+            // 设置连接状态监听
+            wsManager.onConnectionChange((status) => {
+                canvasCollaborationUI.updateConnectionStatus(status);
+            });
+            
+            // 生成画布ID并加入协作
+            const canvasId = generateCanvasId();
+            canvasCollaborationUI.displayCanvasId(canvasId);
+            
+            // 连接WebSocket
+            wsManager.connect();
+            
+            // 延迟加入画布，等待连接建立
+            setTimeout(() => {
+                collaborationManager.joinCanvas(canvasId);
+            }, 1000);
+            
+            // 设置画布事件
+            setupCanvasEvents();
+        }
 
-            stopProfiling() {
-                this.isProfilering = false;
-                console.log('性能分析结束');
-                return this.profileData;
-            }
+        function generateCanvasId() {
+            return 'canvas_' + Math.random().toString(36).substr(2, 9);
+        }
 
-            recordFrame(metrics) {
-                if (!this.isProfilering) return;
+        function setupCanvasEvents() {
+            const canvas = document.getElementById('canvas');
+            
+            // 鼠标移动事件 - 广播光标位置
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX;
+                const y = e.clientY;
                 
-                this.profileData.push({
-                    timestamp: performance.now(),
-                    ...metrics
-                });
-            }
-
-            async testWithNodeCount(count) {
-                console.log(`开始测试 ${count} 个节点的性能...`);
-                
-                // 清空现有节点
-                canvasSystem.clearNodes();
-                
-                // 添加指定数量的节点
-                const startTime = performance.now();
-                canvasSystem.addRandomNodes(count);
-                const addTime = performance.now() - startTime;
-                
-                // 等待几秒收集性能数据
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                
-                const metrics = performanceManager.getPerformanceMetrics();
-                const result = {
-                    nodeCount: count,
-                    addTime: addTime,
-                    avgFps: metrics.fps,
-                    frameTime: metrics.frameTime,
-                    memoryUsage: metrics.memoryUsage,
-                    timestamp: new Date().toISOString()
-                };
-                
-                this.testResults.push(result);
-                console.log('测试结果:', result);
-                
-                return result;
-            }
-
-            generateReport() {
-                const report = {
-                    testResults: this.testResults,
-                    summary: this.generateSummary(),
-                    recommendations: this.generateRecommendations()
-                };
-                
-                console.log('性能测试报告:', report);
-                
-                // 下载报告
-                this.downloadReport(report);
-                
-                return report;
-            }
-
-            generateSummary() {
-                if (this.testResults.length === 0) return null;
-                
-                const avgFps = this.testResults.reduce((sum, result) => sum + result.avgFps, 0) / this.testResults.length;
-                const maxNodes = Math.max(...this.testResults.map(r => r.nodeCount));
-                const minFps = Math.min(...this.testResults.map(r => r.avgFps));
-                
-                return {
-                    totalTests: this.testResults.length,
-                    averageFps: Math.round(avgFps),
-                    maxNodesTested: maxNodes,
-                    minFpsRecorded: minFps
-                };
-            }
-
-            generateRecommendations() {
-                const recommendations = [];
-                
-                if (this.testResults.length > 0) {
-                    const lowFpsTests = this.testResults.filter(r => r.avgFps < 30);
-                    if (lowFpsTests.length > 0) {
-                        recommendations.push('建议在节点数量超过' + Math.min(...lowFpsTests.map(r => r.nodeCount)) + '时启用所有性能优化');
-                    }
-                    
-                    const highMemoryTests = this.testResults.filter(r => r.memoryUsage > 100);
-                    if (highMemoryTests.length > 0) {
-                        recommendations.push('内存使用较高，建议启用对象池管理');
-                    }
+                // 节流发送光标位置
+                if (!canvas.lastCursorUpdate || Date.now() - canvas.lastCursorUpdate > 100) {
+                    collaborationManager.broadcastCursorPosition(x, y);
+                    canvas.lastCursorUpdate = Date.now();
                 }
-                
-                return recommendations;
-            }
+            });
+            
+            // 点击事件
+            canvas.addEventListener('click', (e) => {
+                if (e.target === canvas) {
+                    deselectAllNodes();
+                }
+            });
+        }
 
-            downloadReport(report) {
-                const dataStr = JSON.stringify(report, null, 2);
-                const dataBlob = new Blob([dataStr], {type: 'application/json'});
-                const url = URL.createObjectURL(dataBlob);
-                
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `performance_report_${new Date().toISOString().slice(0, 10)}.json`;
-                link.click();
-                
-                URL.revokeObjectURL(url);
+        // 添加节点
+        function addNode(type) {
+            const canvas = document.getElementById('canvas');
+            const nodeId = 'node_' + (++nodeCounter);
+            
+            const node = document.createElement('div');
+            node.className = 'node';
+            node.id = nodeId;
+            node.style.left = (Math.random() * (canvas.offsetWidth - 200)) + 'px';
+            node.style.top = (Math.random() * (canvas.offsetHeight - 150)) + 'px';
+            
+            const nodeData = {
+                id: nodeId,
+                type: type,
+                title: getNodeTitle(type),
+                x: parseInt(node.style.left),
+                y: parseInt(node.style.top)
+            };
+            
+            node.innerHTML = `
+                <div class="node-header">
+                    <span class="node-title">${nodeData.title}</span>
+                    <span class="node-type" style="background: ${getNodeTypeColor(type)}">
+                        ${type}
+                    </span>
+                </div>
+                <div class="node-content">
+                    ${generateNodeContent(type)}
+                </div>
+                <div class="connection-point input" style="top: 50%"></div>
+                <div class="connection-point output" style="top: 50%"></div>
+            `;
+            
+            // 添加事件监听
+            setupNodeEvents(node);
+            
+            canvas.appendChild(node);
+            
+            // 广播节点添加操作
+            operationSynchronizer.syncNodeOperation(nodeId, {
+                type: 'node_add',
+                nodeData: nodeData
+            });
+        }
+
+        function getNodeTitle(type) {
+            const titles = {
+                'input': '输入节点',
+                'process': '处理节点',
+                'output': '输出节点'
+            };
+            return titles[type] || '未知节点';
+        }
+
+        function getNodeTypeColor(type) {
+            const colors = {
+                'input': '#4CAF50',
+                'process': '#2196F3',
+                'output': '#FF9800'
+            };
+            return colors[type] || '#666';
+        }
+
+        function generateNodeContent(type) {
+            switch (type) {
+                case 'input':
+                    return `
+                        <div class="node-input">
+                            <label>数据源</label>
+                            <select name="dataSource">
+                                <option value="file">文件</option>
+                                <option value="api">API</option>
+                                <option value="database">数据库</option>
+                            </select>
+                        </div>
+                        <div class="node-output">
+                            <label>输出</label>
+                            <div>数据流</div>
+                        </div>
+                    `;
+                case 'process':
+                    return `
+                        <div class="node-input">
+                            <label>输入</label>
+                            <div>数据流</div>
+                        </div>
+                        <div class="node-input">
+                            <label>处理类型</label>
+                            <select name="processType">
+                                <option value="filter">过滤</option>
+                                <option value="transform">转换</option>
+                                <option value="aggregate">聚合</option>
+                            </select>
+                        </div>
+                        <div class="node-output">
+                            <label>输出</label>
+                            <div>处理后数据</div>
+                        </div>
+                    `;
+                case 'output':
+                    return `
+                        <div class="node-input">
+                            <label>输入</label>
+                            <div>处理后数据</div>
+                        </div>
+                        <div class="node-input">
+                            <label>输出格式</label>
+                            <select name="outputFormat">
+                                <option value="json">JSON</option>
+                                <option value="csv">CSV</option>
+                                <option value="xml">XML</option>
+                            </select>
+                        </div>
+                    `;
+                default:
+                    return '<div>未知节点类型</div>';
             }
         }
 
-        // 主画布系统
-        class CanvasSystem {
-            constructor() {
-                this.scene = new THREE.Scene();
-                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                this.renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true });
-                this.nodes = [];
+        function setupNodeEvents(node) {
+            // 点击选择
+            node.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectNode(node);
+            });
+            
+            // 拖拽开始
+            node.addEventListener('mousedown', (e) => {
+                if (e.target.classList.contains('connection-point')) return;
                 
-                // 初始化性能优化组件
-                this.nodePool = new NodePoolManager();
-                this.viewportCuller = new ViewportCuller();
-                this.lodController = new LODController();
-                this.batchRenderer = new BatchRenderer();
+                isDragging = true;
+                selectedNode = node;
                 
-                this.setupRenderer();
-                this.setupCamera();
-                this.setupControls();
-                this.animate();
+                const rect = node.getBoundingClientRect();
+                dragOffset.x = e.clientX - rect.left;
+                dragOffset.y = e.clientY - rect.top;
                 
-                // 预加载节点池
-                this.nodePool.preloadNodes(50);
-            }
-
-            setupRenderer() {
-                this.renderer.setSize(window.innerWidth, window.innerHeight - 80);
-                this.renderer.setClearColor(0x1a1a2e);
-                this.renderer.shadowMap.enabled = true;
-                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            }
-
-            setupCamera() {
-                this.camera.position.set(0, 0, 20);
-                this.camera.lookAt(0, 0, 0);
-            }
-
-            setupControls() {
-                let isDragging = false;
-                let previousMousePosition = { x: 0, y: 0 };
-                
-                const canvas = this.renderer.domElement;
-                
-                canvas.addEventListener('mousedown', (e) => {
-                    isDragging = true;
-                    previousMousePosition = { x: e.clientX, y: e.clientY };
-                });
-                
-                canvas.addEventListener('mousemove', (e) => {
-                    if (!isDragging) return;
+                node.style.zIndex = '100';
+                e.preventDefault();
+            });
+            
+            // 输入变化事件
+            const inputs = node.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const data = {};
+                    data[input.name] = input.value;
                     
-                    const deltaX = e.clientX - previousMousePosition.x;
-                    const deltaY = e.clientY - previousMousePosition.y;
-                    
-                    this.camera.position.x -= deltaX * 0.01;
-                    this.camera.position.y += deltaY * 0.01;
-                    
-                    previousMousePosition = { x: e.clientX, y: e.clientY };
-                });
-                
-                canvas.addEventListener('mouseup', () => {
-                    isDragging = false;
-                });
-                
-                canvas.addEventListener('wheel', (e) => {
-                    this.camera.position.z += e.deltaY * 0.01;
-                    this.camera.position.z = Math.max(5, Math.min(100, this.camera.position.z));
-                });
-                
-                window.addEventListener('resize', () => {
-                    this.camera.aspect = window.innerWidth / (window.innerHeight - 80);
-                    this.camera.updateProjectionMatrix();
-                    this.renderer.setSize(window.innerWidth, window.innerHeight - 80);
-                });
-            }
-
-            addRandomNodes(count, type = null) {
-                const types = type ? [type] : ['input', 'process', 'output'];
-                
-                for (let i = 0; i < count; i++) {
-                    const nodeType = types[Math.floor(Math.random() * types.length)];
-                    const node = this.nodePool.getNode(nodeType);
-                    
-                    // 随机位置
-                    node.position.set(
-                        (Math.random() - 0.5) * 40,
-                        (Math.random() - 0.5) * 30,
-                        (Math.random() - 0.5) * 10
-                    );
-                    
-                    node.visible = true;
-                    this.nodes.push(node);
-                    this.scene.add(node);
-                    
-                    // 添加到批量渲染器
-                    this.batchRenderer.addToBatch(node);
-                }
-                
-                console.log(`添加了 ${count} 个节点，总计 ${this.nodes.length} 个节点`);
-            }
-
-            clearNodes() {
-                this.nodes.forEach(node => {
-                    this.scene.remove(node);
-                    this.nodePool.releaseNode(node);
-                });
-                this.nodes = [];
-                this.batchRenderer.clearBatch();
-                console.log('已清空所有节点');
-            }
-
-            enableLOD() {
-                this.lodController.enabled = true;
-                document.getElementById('lodToggle').classList.add('active');
-            }
-
-            disableLOD() {
-                this.lodController.enabled = false;
-                document.getElementById('lodToggle').classList.remove('active');
-            }
-
-            enableCulling() {
-                this.viewportCuller.enabled = true;
-                document.getElementById('cullingToggle').classList.add('active');
-            }
-
-            disableCulling() {
-                this.viewportCuller.enabled = false;
-                document.getElementById('cullingToggle').classList.remove('active');
-            }
-
-            enableBatching() {
-                this.batchRenderer.enabled = true;
-                document.getElementById('batchingToggle').classList.add('active');
-            }
-
-            disableBatching() {
-                this.batchRenderer.enabled = false;
-                document.getElementById('batchingToggle').classList.remove('active');
-            }
-
-            animate() {
-                requestAnimationFrame(() => this.animate());
-                
-                // 更新性能优化组件
-                this.viewportCuller.updateViewport(this.camera);
-                this.lodController.updateLOD(this.camera, this.nodes);
-                
-                // 视口裁剪
-                const visibleNodes = this.viewportCuller.cullNodes(this.nodes);
-                
-                // 批量渲染
-                if (this.batchRenderer.enabled) {
-                    ['input', 'process', 'output'].forEach(type => {
-                        this.batchRenderer.renderBatch(type);
+                    operationSynchronizer.syncNodeOperation(node.id, {
+                        type: 'update',
+                        data: data
                     });
-                }
-                
-                // 更新性能指标
-                performanceManager.metrics.nodeCount = this.nodes.length;
-                performanceManager.metrics.visibleNodes = visibleNodes.length;
-                performanceManager.metrics.drawCalls = this.renderer.info.render.calls;
-                
-                // 自动优化策略
-                performanceManager.optimizeRenderingStrategy();
-                
-                this.renderer.render(this.scene, this.camera);
-            }
+                });
+            });
         }
 
-        // 全局实例
-        let performanceManager;
-        let performanceProfiler;
-        let canvasSystem;
+        function selectNode(node) {
+            deselectAllNodes();
+            node.classList.add('selected');
+            selectedNode = node;
+        }
 
-        // 初始化系统
-        window.addEventListener('DOMContentLoaded', () => {
-            performanceManager = new PerformanceManager();
-            performanceProfiler = new PerformanceProfiler();
-            canvasSystem = new CanvasSystem();
-            
-            performanceManager.startMonitoring();
-            
-            // 添加一些初始节点
-            canvasSystem.addRandomNodes(50);
+        function deselectAllNodes() {
+            document.querySelectorAll('.node.selected').forEach(node => {
+                node.classList.remove('selected');
+            });
+            selectedNode = null;
+        }
+
+        // 全局鼠标事件
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging && selectedNode) {
+                const x = e.clientX - dragOffset.x;
+                const y = e.clientY - dragOffset.y;
+                
+                selectedNode.style.left = x + 'px';
+                selectedNode.style.top = y + 'px';
+            }
         });
 
-        // 控制函数
-        function toggleLOD() {
-            const toggle = document.getElementById('lodToggle');
-            if (toggle.classList.contains('active')) {
-                canvasSystem.disableLOD();
-            } else {
-                canvasSystem.enableLOD();
+        document.addEventListener('mouseup', (e) => {
+            if (isDragging && selectedNode) {
+                isDragging = false;
+                selectedNode.style.zIndex = '10';
+                
+                // 广播移动操作
+                operationSynchronizer.syncNodeOperation(selectedNode.id, {
+                    type: 'move',
+                    x: parseInt(selectedNode.style.left),
+                    y: parseInt(selectedNode.style.top)
+                });
             }
-        }
+        });
 
-        function toggleCulling() {
-            const toggle = document.getElementById('cullingToggle');
-            if (toggle.classList.contains('active')) {
-                canvasSystem.disableCulling();
-            } else {
-                canvasSystem.enableCulling();
+        // 键盘事件
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Delete' && selectedNode) {
+                operationSynchronizer.syncNodeOperation(selectedNode.id, {
+                    type: 'node_delete',
+                    nodeId: selectedNode.id
+                });
+                selectedNode.remove();
+                selectedNode = null;
             }
-        }
+        });
 
-        function toggleBatching() {
-            const toggle = document.getElementById('batchingToggle');
-            if (toggle.classList.contains('active')) {
-                canvasSystem.disableBatching();
-            } else {
-                canvasSystem.enableBatching();
-            }
-        }
+        // 页面卸载时清理
+        window.addEventListener('beforeunload', () => {
+            collaborationManager.leaveCanvas();
+            wsManager.disconnect();
+        });
 
-        function toggleMonitoring() {
-            const toggle = document.getElementById('monitoringToggle');
-            const statsElement = document.getElementById('performanceStats');
-            
-            if (toggle.classList.contains('active')) {
-                performanceManager.stopMonitoring();
-                toggle.classList.remove('active');
-                statsElement.style.display = 'none';
-            } else {
-                performanceManager.startMonitoring();
-                toggle.classList.add('active');
-                statsElement.style.display = 'block';
-            }
-        }
-
-        async function performanceTest() {
-            const nodeCount = parseInt(document.getElementById('nodeCountInput').value);
-            if (nodeCount < 1 || nodeCount > 5000) {
-                alert('节点数量应在1-5000之间');
-                return;
-            }
-            
-            await performanceProfiler.testWithNodeCount(nodeCount);
-        }
-
-        function clearAllNodes() {
-            canvasSystem.clearNodes();
-        }
-
-        function generateReport() {
-            performanceProfiler.generateReport();
-        }
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
