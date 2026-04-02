@@ -80,7 +80,7 @@
         .canvas {
             width: 100%;
             height: 100%;
-            background: #f5f5f5;
+            background: rgba(255, 255, 255, 0.1);
             position: relative;
             cursor: grab;
         }
@@ -91,299 +91,96 @@
 
         .node {
             position: absolute;
-            min-width: 150px;
-            background: white;
+            width: 120px;
+            height: 80px;
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 500;
+            font-size: 12px;
             cursor: move;
-            user-select: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             transition: all 0.3s ease;
-            border: 2px solid transparent;
+            user-select: none;
+            z-index: 10;
         }
 
         .node:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
         }
 
         .node.selected {
-            border-color: #2196F3;
-            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8);
         }
 
-        .node-header {
-            padding: 12px 16px;
-            border-radius: 10px 10px 0 0;
-            color: white;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .input-node .node-header {
+        .input-node {
             background: linear-gradient(135deg, #4CAF50, #45a049);
         }
 
-        .process-node .node-header {
+        .process-node {
             background: linear-gradient(135deg, #2196F3, #1976D2);
         }
 
-        .output-node .node-header {
+        .output-node {
             background: linear-gradient(135deg, #FF9800, #F57C00);
         }
 
-        .node-content {
-            padding: 16px;
-        }
-
-        .node-input, .node-output {
-            margin: 8px 0;
-        }
-
-        .node-input label, .node-output label {
-            display: block;
-            margin-bottom: 4px;
-            font-size: 12px;
-            color: #666;
-            font-weight: 500;
-        }
-
-        .node-input input, .node-input select {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
-        }
-
-        .node-input input:focus, .node-input select:focus {
-            outline: none;
-            border-color: #2196F3;
-        }
-
         .connection-point {
+            position: absolute;
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            position: absolute;
+            background: white;
+            border: 2px solid #333;
             cursor: crosshair;
-            transition: all 0.3s ease;
-            border: 2px solid white;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 20;
         }
 
         .input-point {
             left: -6px;
-            background: #4CAF50;
+            top: 50%;
+            transform: translateY(-50%);
         }
 
         .output-point {
             right: -6px;
-            background: #FF9800;
-        }
-
-        .connection-point:hover {
-            transform: scale(1.3);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            top: 50%;
+            transform: translateY(-50%);
         }
 
         .connection-line {
             position: absolute;
             pointer-events: none;
-            z-index: 1;
+            z-index: 5;
         }
 
-        .temp-connection {
-            stroke: #2196F3;
-            stroke-width: 3;
-            fill: none;
-            stroke-dasharray: 5,5;
-            animation: dash 1s linear infinite;
-        }
-
-        .established-connection {
-            stroke: #4CAF50;
-            stroke-width: 3;
-            fill: none;
-        }
-
-        @keyframes dash {
-            to {
-                stroke-dashoffset: -10;
-            }
-        }
-
-        /* 协作相关样式 */
-        .collaboration-panel {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            width: 250px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            padding: 16px;
-            z-index: 1001;
-        }
-
-        .connection-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 16px;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .connection-status.connected {
-            background: rgba(76, 175, 80, 0.1);
-            color: #4CAF50;
-        }
-
-        .connection-status.disconnected {
-            background: rgba(244, 67, 54, 0.1);
-            color: #f44336;
-        }
-
-        .connection-status.connecting {
-            background: rgba(255, 152, 0, 0.1);
-            color: #FF9800;
-        }
-
-        .status-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: currentColor;
-        }
-
-        .online-users {
-            margin-bottom: 16px;
-        }
-
-        .online-users h3 {
-            font-size: 14px;
-            color: #333;
-            margin-bottom: 8px;
-        }
-
-        .user-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 0;
-            font-size: 13px;
-        }
-
-        .user-avatar {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 10px;
-        }
-
-        .user-cursor {
+        .temp-line {
             position: absolute;
-            width: 20px;
-            height: 20px;
             pointer-events: none;
-            z-index: 1002;
-            transition: all 0.1s ease;
+            z-index: 15;
+            stroke: #fff;
+            stroke-width: 2;
+            stroke-dasharray: 5,5;
         }
 
-        .cursor-pointer {
-            width: 0;
-            height: 0;
-            border-left: 10px solid;
-            border-right: 10px solid transparent;
-            border-bottom: 15px solid transparent;
-        }
-
-        .cursor-label {
-            position: absolute;
-            top: 20px;
-            left: 0;
+        .status-bar {
             background: rgba(0, 0, 0, 0.8);
             color: white;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 11px;
-            white-space: nowrap;
-        }
-
-        .conflict-dialog {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            padding: 24px;
-            z-index: 1003;
-            max-width: 400px;
-            width: 90%;
-        }
-
-        .conflict-dialog h3 {
-            color: #f44336;
-            margin-bottom: 16px;
-            font-size: 18px;
-        }
-
-        .conflict-actions {
+            padding: 8px 20px;
+            font-size: 12px;
             display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-            margin-top: 20px;
-        }
-
-        .conflict-btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .conflict-btn.accept {
-            background: #4CAF50;
-            color: white;
-        }
-
-        .conflict-btn.reject {
-            background: #f44336;
-            color: white;
-        }
-
-        .conflict-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .node-selection {
-            border: 2px dashed;
-            border-radius: 12px;
-            position: absolute;
-            pointer-events: none;
-            opacity: 0.6;
+            justify-content: space-between;
+            align-items: center;
         }
     </style>
 </head>
 <body>
     <div class="app-container">
         <div class="toolbar">
-            <h1>节点系统工作流画布</h1>
+            <h1>智能画布工作流编辑器</h1>
             <button class="node-button input-node-btn" onclick="createNode('input')">输入节点</button>
             <button class="node-button process-node-btn" onclick="createNode('process')">处理节点</button>
             <button class="node-button output-node-btn" onclick="createNode('output')">输出节点</button>
@@ -391,1072 +188,496 @@
         
         <div class="canvas-container">
             <div class="canvas" id="canvas">
-                <svg id="connections" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;"></svg>
+                <svg id="connections" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;">
+                </svg>
+                <svg id="temp-connection" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15;">
+                </svg>
             </div>
         </div>
-
-        <!-- 协作面板 -->
-        <div class="collaboration-panel">
-            <div class="connection-status disconnected" id="connectionStatus">
-                <div class="status-indicator"></div>
-                <span>未连接</span>
-            </div>
-            
-            <div class="online-users">
-                <h3>在线用户</h3>
-                <div id="usersList"></div>
-            </div>
+        
+        <div class="status-bar">
+            <span id="node-count">节点数量: 0</span>
+            <span id="connection-count">连接数量: 0</span>
         </div>
     </div>
 
     <script>
-        // WebSocket管理器
-        class WebSocketManager {
+        class WorkflowCanvas {
             constructor() {
-                this.ws = null;
-                this.reconnectAttempts = 0;
-                this.maxReconnectAttempts = 5;
-                this.reconnectDelay = 1000;
-                this.messageCallbacks = [];
-                this.connectionCallbacks = [];
+                this.canvas = document.getElementById('canvas');
+                this.connectionsLayer = document.getElementById('connections');
+                this.tempConnectionLayer = document.getElementById('temp-connection');
+                this.nodes = new Map();
+                this.connections = new Map();
+                this.nodeCounter = 0;
+                this.connectionCounter = 0;
+                this.isDragging = false;
+                this.dragNode = null;
+                this.dragOffset = { x: 0, y: 0 };
                 this.isConnecting = false;
-            }
-
-            connect(url = 'ws://localhost:8080') {
-                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                    return Promise.resolve();
-                }
-
-                this.isConnecting = true;
-                this.updateConnectionStatus('connecting');
-
-                return new Promise((resolve, reject) => {
-                    try {
-                        this.ws = new WebSocket(url);
-                        
-                        this.ws.onopen = () => {
-                            console.log('WebSocket连接已建立');
-                            this.isConnecting = false;
-                            this.reconnectAttempts = 0;
-                            this.updateConnectionStatus('connected');
-                            this.notifyConnectionChange(true);
-                            resolve();
-                        };
-
-                        this.ws.onmessage = (event) => {
-                            try {
-                                const message = JSON.parse(event.data);
-                                this.notifyMessage(message);
-                            } catch (error) {
-                                console.error('解析消息失败:', error);
-                            }
-                        };
-
-                        this.ws.onclose = () => {
-                            console.log('WebSocket连接已关闭');
-                            this.isConnecting = false;
-                            this.updateConnectionStatus('disconnected');
-                            this.notifyConnectionChange(false);
-                            this.attemptReconnect();
-                        };
-
-                        this.ws.onerror = (error) => {
-                            console.error('WebSocket错误:', error);
-                            this.isConnecting = false;
-                            this.updateConnectionStatus('disconnected');
-                            reject(error);
-                        };
-                    } catch (error) {
-                        this.isConnecting = false;
-                        this.updateConnectionStatus('disconnected');
-                        reject(error);
-                    }
-                });
-            }
-
-            disconnect() {
-                if (this.ws) {
-                    this.ws.close();
-                    this.ws = null;
-                }
-            }
-
-            send(message) {
-                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                    this.ws.send(JSON.stringify(message));
-                    return true;
-                }
-                return false;
-            }
-
-            onMessage(callback) {
-                this.messageCallbacks.push(callback);
-            }
-
-            onConnectionChange(callback) {
-                this.connectionCallbacks.push(callback);
-            }
-
-            notifyMessage(message) {
-                this.messageCallbacks.forEach(callback => {
-                    try {
-                        callback(message);
-                    } catch (error) {
-                        console.error('消息回调错误:', error);
-                    }
-                });
-            }
-
-            notifyConnectionChange(connected) {
-                this.connectionCallbacks.forEach(callback => {
-                    try {
-                        callback(connected);
-                    } catch (error) {
-                        console.error('连接状态回调错误:', error);
-                    }
-                });
-            }
-
-            attemptReconnect() {
-                if (this.reconnectAttempts < this.maxReconnectAttempts && !this.isConnecting) {
-                    this.reconnectAttempts++;
-                    console.log(`尝试重连 (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-                    
-                    setTimeout(() => {
-                        this.connect().catch(error => {
-                            console.error('重连失败:', error);
-                        });
-                    }, this.reconnectDelay * this.reconnectAttempts);
-                }
-            }
-
-            updateConnectionStatus(status) {
-                const statusElement = document.getElementById('connectionStatus');
-                statusElement.className = `connection-status ${status}`;
+                this.connectionStart = null;
+                this.tempLine = null;
                 
-                const statusText = {
-                    'connected': '已连接',
-                    'disconnected': '未连接',
-                    'connecting': '连接中...'
-                };
+                this.initEventListeners();
+                this.updateStatus();
+            }
+
+            initEventListeners() {
+                // 画布事件
+                this.canvas.addEventListener('mousedown', this.handleCanvasMouseDown.bind(this));
+                this.canvas.addEventListener('mousemove', this.handleCanvasMouseMove.bind(this));
+                this.canvas.addEventListener('mouseup', this.handleCanvasMouseUp.bind(this));
+                this.canvas.addEventListener('mouseleave', this.handleCanvasMouseLeave.bind(this));
                 
-                statusElement.querySelector('span').textContent = statusText[status];
-            }
-        }
-
-        // 协作引擎
-        class CollaborationEngine {
-            constructor(wsManager) {
-                this.wsManager = wsManager;
-                this.userId = this.generateUserId();
-                this.sessionId = null;
-                this.conflictResolver = new ConflictResolver();
-                
-                this.wsManager.onMessage(this.handleMessage.bind(this));
+                // 防止右键菜单
+                this.canvas.addEventListener('contextmenu', e => e.preventDefault());
             }
 
-            generateUserId() {
-                return 'user_' + Math.random().toString(36).substr(2, 9);
-            }
-
-            handleMessage(message) {
-                switch (message.type) {
-                    case 'node_update':
-                        this.handleNodeUpdate(message.data);
-                        break;
-                    case 'connection_update':
-                        this.handleConnectionUpdate(message.data);
-                        break;
-                    case 'user_presence':
-                        presenceManager.updateUserPresence(message.userId, message.data);
-                        break;
-                    case 'conflict':
-                        this.handleConflict(message.data);
-                        break;
-                    case 'session_info':
-                        this.sessionId = message.sessionId;
-                        break;
-                }
-            }
-
-            handleNodeUpdate(nodeData) {
-                if (nodeData.userId === this.userId) return;
-                
-                const existingNode = document.getElementById(nodeData.id);
-                if (existingNode) {
-                    // 检查冲突
-                    const conflict = this.conflictResolver.checkConflict(nodeData, existingNode);
-                    if (conflict) {
-                        this.showConflictDialog(conflict);
-                        return;
-                    }
-                }
-                
-                // 应用远程更改
-                this.applyNodeUpdate(nodeData);
-                changeTracker.applyRemoteChange({
-                    type: 'node_update',
-                    data: nodeData,
-                    userId: nodeData.userId
-                });
-            }
-
-            handleConnectionUpdate(connectionData) {
-                if (connectionData.userId === this.userId) return;
-                
-                this.applyConnectionUpdate(connectionData);
-                changeTracker.applyRemoteChange({
-                    type: 'connection_update',
-                    data: connectionData,
-                    userId: connectionData.userId
-                });
-            }
-
-            handleConflict(conflictData) {
-                collaborationUI.showConflictDialog(conflictData);
-            }
-
-            broadcastChange(changeData) {
-                const message = {
-                    type: changeData.type,
-                    data: {
-                        ...changeData.data,
-                        userId: this.userId,
-                        timestamp: Date.now()
-                    },
-                    userId: this.userId,
-                    sessionId: this.sessionId
-                };
-                
-                this.wsManager.send(message);
-            }
-
-            applyNodeUpdate(nodeData) {
-                let node = document.getElementById(nodeData.id);
-                
-                if (!node && nodeData.action === 'create') {
-                    node = this.createNodeElement(nodeData);
-                    document.getElementById('canvas').appendChild(node);
-                } else if (node) {
-                    if (nodeData.action === 'delete') {
-                        node.remove();
-                        return;
-                    }
-                    
-                    // 更新节点位置和属性
-                    if (nodeData.position) {
-                        node.style.left = nodeData.position.x + 'px';
-                        node.style.top = nodeData.position.y + 'px';
-                    }
-                    
-                    if (nodeData.properties) {
-                        this.updateNodeProperties(node, nodeData.properties);
-                    }
-                }
-            }
-
-            applyConnectionUpdate(connectionData) {
-                if (connectionData.action === 'create') {
-                    this.createConnection(connectionData.from, connectionData.to);
-                } else if (connectionData.action === 'delete') {
-                    this.removeConnection(connectionData.id);
-                }
-            }
-
-            createNodeElement(nodeData) {
+            createNode(type) {
+                const nodeId = `node_${++this.nodeCounter}`;
                 const node = document.createElement('div');
-                node.className = `node ${nodeData.type}-node`;
-                node.id = nodeData.id;
-                node.style.left = nodeData.position.x + 'px';
-                node.style.top = nodeData.position.y + 'px';
+                node.className = `node ${type}-node`;
+                node.id = nodeId;
+                node.textContent = this.getNodeLabel(type);
                 
-                const typeNames = {
+                // 随机位置
+                const x = Math.random() * (this.canvas.clientWidth - 120);
+                const y = Math.random() * (this.canvas.clientHeight - 80);
+                node.style.left = x + 'px';
+                node.style.top = y + 'px';
+                
+                // 创建连接点
+                this.createConnectionPoints(node, type);
+                
+                this.canvas.appendChild(node);
+                this.nodes.set(nodeId, {
+                    element: node,
+                    type: type,
+                    x: x,
+                    y: y,
+                    connections: new Set()
+                });
+                
+                this.updateStatus();
+            }
+
+            createConnectionPoints(node, type) {
+                // 输入点（除了输入节点，其他都有）
+                if (type !== 'input') {
+                    const inputPoint = document.createElement('div');
+                    inputPoint.className = 'connection-point input-point';
+                    inputPoint.dataset.type = 'input';
+                    inputPoint.dataset.nodeId = node.id;
+                    node.appendChild(inputPoint);
+                }
+                
+                // 输出点（除了输出节点，其他都有）
+                if (type !== 'output') {
+                    const outputPoint = document.createElement('div');
+                    outputPoint.className = 'connection-point output-point';
+                    outputPoint.dataset.type = 'output';
+                    outputPoint.dataset.nodeId = node.id;
+                    node.appendChild(outputPoint);
+                }
+            }
+
+            getNodeLabel(type) {
+                const labels = {
                     'input': '输入节点',
                     'process': '处理节点',
                     'output': '输出节点'
                 };
-                
-                node.innerHTML = `
-                    <div class="node-header">${typeNames[nodeData.type]}</div>
-                    <div class="node-content">
-                        <div class="node-input">
-                            <label>节点名称</label>
-                            <input type="text" value="${nodeData.name || ''}" onchange="updateNodeProperty('${nodeData.id}', 'name', this.value)">
-                        </div>
-                    </div>
-                    <div class="connection-point input-point" style="top: 50%;"></div>
-                    <div class="connection-point output-point" style="top: 50%;"></div>
-                `;
-                
-                this.makeNodeDraggable(node);
-                return node;
+                return labels[type] || '未知节点';
             }
 
-            updateNodeProperties(node, properties) {
-                Object.keys(properties).forEach(key => {
-                    const input = node.querySelector(`input[data-property="${key}"]`);
-                    if (input) {
-                        input.value = properties[key];
-                    }
-                });
+            handleCanvasMouseDown(e) {
+                const target = e.target;
+                
+                // 处理连接点点击
+                if (target.classList.contains('connection-point')) {
+                    this.handleConnectionPointClick(target, e);
+                    return;
+                }
+                
+                // 处理节点拖拽
+                if (target.classList.contains('node')) {
+                    this.startNodeDrag(target, e);
+                    return;
+                }
+                
+                // 取消所有选择
+                this.clearSelection();
             }
 
-            makeNodeDraggable(node) {
-                let isDragging = false;
-                let startX, startY, initialX, initialY;
+            handleConnectionPointClick(point, e) {
+                e.stopPropagation();
                 
-                node.addEventListener('mousedown', (e) => {
-                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-                    
-                    isDragging = true;
-                    startX = e.clientX;
-                    startY = e.clientY;
-                    initialX = parseInt(node.style.left) || 0;
-                    initialY = parseInt(node.style.top) || 0;
-                    
-                    node.style.zIndex = 1000;
-                    e.preventDefault();
-                });
-                
-                document.addEventListener('mousemove', (e) => {
-                    if (!isDragging) return;
-                    
-                    const deltaX = e.clientX - startX;
-                    const deltaY = e.clientY - startY;
-                    
-                    const newX = initialX + deltaX;
-                    const newY = initialY + deltaY;
-                    
-                    node.style.left = newX + 'px';
-                    node.style.top = newY + 'px';
-                    
-                    // 广播位置更新
-                    this.broadcastChange({
-                        type: 'node_update',
-                        data: {
-                            id: node.id,
-                            action: 'move',
-                            position: { x: newX, y: newY }
-                        }
-                    });
-                });
-                
-                document.addEventListener('mouseup', () => {
-                    if (isDragging) {
-                        isDragging = false;
-                        node.style.zIndex = '';
-                    }
-                });
-            }
-
-            createConnection(fromNodeId, toNodeId) {
-                // 创建连接线的逻辑
-                const svg = document.getElementById('connections');
-                const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                line.setAttribute('class', 'established-connection');
-                line.setAttribute('data-from', fromNodeId);
-                line.setAttribute('data-to', toNodeId);
-                
-                // 计算连接路径
-                this.updateConnectionPath(line, fromNodeId, toNodeId);
-                svg.appendChild(line);
-            }
-
-            removeConnection(connectionId) {
-                const connection = document.querySelector(`[data-connection-id="${connectionId}"]`);
-                if (connection) {
-                    connection.remove();
+                if (!this.isConnecting) {
+                    // 开始连接
+                    this.startConnection(point);
+                } else {
+                    // 完成连接
+                    this.completeConnection(point);
                 }
             }
 
-            updateConnectionPath(line, fromNodeId, toNodeId) {
-                const fromNode = document.getElementById(fromNodeId);
-                const toNode = document.getElementById(toNodeId);
+            startConnection(point) {
+                // 只能从输出点开始连接
+                if (point.dataset.type !== 'output') {
+                    return;
+                }
                 
-                if (!fromNode || !toNode) return;
+                this.isConnecting = true;
+                this.connectionStart = point;
                 
-                const fromRect = fromNode.getBoundingClientRect();
-                const toRect = toNode.getBoundingClientRect();
-                const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+                // 创建临时连线
+                this.createTempLine(point);
                 
-                const startX = fromRect.right - canvasRect.left;
-                const startY = fromRect.top + fromRect.height / 2 - canvasRect.top;
-                const endX = toRect.left - canvasRect.left;
-                const endY = toRect.top + toRect.height / 2 - canvasRect.top;
-                
-                const controlX1 = startX + (endX - startX) / 3;
-                const controlY1 = startY;
-                const controlX2 = startX + 2 * (endX - startX) / 3;
-                const controlY2 = endY;
-                
-                const path = `M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`;
-                line.setAttribute('d', path);
+                // 高亮可连接的输入点
+                this.highlightValidTargets();
             }
 
-            resolveConflict(conflictData, resolution) {
-                const message = {
-                    type: 'conflict_resolution',
-                    data: {
-                        conflictId: conflictData.id,
-                        resolution: resolution,
-                        userId: this.userId
-                    }
+            completeConnection(endPoint) {
+                if (!this.isConnecting || !this.connectionStart) {
+                    this.cancelConnection();
+                    return;
+                }
+                
+                // 验证连接有效性
+                if (!this.isValidConnection(this.connectionStart, endPoint)) {
+                    this.cancelConnection();
+                    return;
+                }
+                
+                // 创建连接
+                this.createConnection(this.connectionStart, endPoint);
+                this.cancelConnection();
+            }
+
+            isValidConnection(startPoint, endPoint) {
+                // 不能连接到自己
+                if (startPoint.dataset.nodeId === endPoint.dataset.nodeId) {
+                    return false;
+                }
+                
+                // 必须是输出点到输入点
+                if (startPoint.dataset.type !== 'output' || endPoint.dataset.type !== 'input') {
+                    return false;
+                }
+                
+                // 检查是否已存在连接
+                const connectionId = `${startPoint.dataset.nodeId}_${endPoint.dataset.nodeId}`;
+                if (this.connections.has(connectionId)) {
+                    return false;
+                }
+                
+                return true;
+            }
+
+            createConnection(startPoint, endPoint) {
+                const startNodeId = startPoint.dataset.nodeId;
+                const endNodeId = endPoint.dataset.nodeId;
+                const connectionId = `${startNodeId}_${endNodeId}`;
+                
+                // 创建SVG连线
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('stroke', '#fff');
+                line.setAttribute('stroke-width', '2');
+                line.setAttribute('id', connectionId);
+                
+                this.connectionsLayer.appendChild(line);
+                
+                // 存储连接信息
+                const connection = {
+                    id: connectionId,
+                    startNodeId: startNodeId,
+                    endNodeId: endNodeId,
+                    startPoint: startPoint,
+                    endPoint: endPoint,
+                    element: line
                 };
                 
-                this.wsManager.send(message);
-            }
-        }
-
-        // 在线状态管理器
-        class PresenceManager {
-            constructor() {
-                this.users = new Map();
-                this.cursors = new Map();
-                this.colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
-                this.colorIndex = 0;
-            }
-
-            updateUserPresence(userId, presenceData) {
-                if (!this.users.has(userId)) {
-                    this.users.set(userId, {
-                        id: userId,
-                        name: presenceData.name || `用户${userId.slice(-4)}`,
-                        color: this.colors[this.colorIndex % this.colors.length],
-                        lastSeen: Date.now()
-                    });
-                    this.colorIndex++;
-                }
+                this.connections.set(connectionId, connection);
                 
-                const user = this.users.get(userId);
-                user.lastSeen = Date.now();
+                // 更新节点连接记录
+                this.nodes.get(startNodeId).connections.add(connectionId);
+                this.nodes.get(endNodeId).connections.add(connectionId);
                 
-                if (presenceData.cursor) {
-                    this.showUserCursor(userId, presenceData.cursor);
-                }
+                // 更新连线位置
+                this.updateConnectionPosition(connection);
                 
-                if (presenceData.selection) {
-                    this.highlightUserSelection(userId, presenceData.selection);
-                }
-                
-                this.updateOnlineUsersList();
+                this.updateStatus();
             }
 
-            showUserCursor(userId, position) {
-                let cursor = this.cursors.get(userId);
+            updateConnectionPosition(connection) {
+                const startNode = this.nodes.get(connection.startNodeId);
+                const endNode = this.nodes.get(connection.endNodeId);
                 
-                if (!cursor) {
-                    cursor = document.createElement('div');
-                    cursor.className = 'user-cursor';
-                    cursor.innerHTML = `
-                        <div class="cursor-pointer" style="border-left-color: ${this.users.get(userId).color};"></div>
-                        <div class="cursor-label">${this.users.get(userId).name}</div>
-                    `;
-                    document.body.appendChild(cursor);
-                    this.cursors.set(userId, cursor);
+                if (!startNode || !endNode) {
+                    return;
                 }
                 
-                cursor.style.left = position.x + 'px';
-                cursor.style.top = position.y + 'px';
-                cursor.style.display = 'block';
+                // 计算连接点的绝对位置
+                const startRect = startNode.element.getBoundingClientRect();
+                const endRect = endNode.element.getBoundingClientRect();
+                const canvasRect = this.canvas.getBoundingClientRect();
                 
-                // 自动隐藏光标
-                clearTimeout(cursor.hideTimeout);
-                cursor.hideTimeout = setTimeout(() => {
-                    this.hideUserCursor(userId);
-                }, 3000);
+                const startX = startRect.right - canvasRect.left;
+                const startY = startRect.top + startRect.height / 2 - canvasRect.top;
+                const endX = endRect.left - canvasRect.left;
+                const endY = endRect.top + endRect.height / 2 - canvasRect.top;
+                
+                connection.element.setAttribute('x1', startX);
+                connection.element.setAttribute('y1', startY);
+                connection.element.setAttribute('x2', endX);
+                connection.element.setAttribute('y2', endY);
             }
 
-            hideUserCursor(userId) {
-                const cursor = this.cursors.get(userId);
-                if (cursor) {
-                    cursor.style.display = 'none';
+            updateAllConnections() {
+                // 更新所有连接的位置
+                this.connections.forEach(connection => {
+                    this.updateConnectionPosition(connection);
+                });
+            }
+
+            createTempLine(startPoint) {
+                this.tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                this.tempLine.setAttribute('stroke', '#fff');
+                this.tempLine.setAttribute('stroke-width', '2');
+                this.tempLine.setAttribute('stroke-dasharray', '5,5');
+                this.tempConnectionLayer.appendChild(this.tempLine);
+                
+                this.updateTempLine(startPoint);
+            }
+
+            updateTempLine(startPoint, mouseX = null, mouseY = null) {
+                if (!this.tempLine) return;
+                
+                const startNode = this.nodes.get(startPoint.dataset.nodeId);
+                if (!startNode) return;
+                
+                const startRect = startNode.element.getBoundingClientRect();
+                const canvasRect = this.canvas.getBoundingClientRect();
+                
+                const startX = startRect.right - canvasRect.left;
+                const startY = startRect.top + startRect.height / 2 - canvasRect.top;
+                
+                let endX, endY;
+                if (mouseX !== null && mouseY !== null) {
+                    endX = mouseX - canvasRect.left;
+                    endY = mouseY - canvasRect.top;
+                } else {
+                    endX = startX + 50;
+                    endY = startY;
+                }
+                
+                this.tempLine.setAttribute('x1', startX);
+                this.tempLine.setAttribute('y1', startY);
+                this.tempLine.setAttribute('x2', endX);
+                this.tempLine.setAttribute('y2', endY);
+            }
+
+            highlightValidTargets() {
+                // 高亮所有可连接的输入点
+                const inputPoints = this.canvas.querySelectorAll('.connection-point.input-point');
+                inputPoints.forEach(point => {
+                    point.style.background = '#4CAF50';
+                    point.style.transform = 'translateY(-50%) scale(1.2)';
+                });
+            }
+
+            clearHighlights() {
+                // 清除所有高亮
+                const points = this.canvas.querySelectorAll('.connection-point');
+                points.forEach(point => {
+                    point.style.background = 'white';
+                    point.style.transform = point.classList.contains('input-point') ? 'translateY(-50%)' : 'translateY(-50%)';
+                });
+            }
+
+            cancelConnection() {
+                this.isConnecting = false;
+                this.connectionStart = null;
+                
+                if (this.tempLine) {
+                    this.tempConnectionLayer.removeChild(this.tempLine);
+                    this.tempLine = null;
+                }
+                
+                this.clearHighlights();
+            }
+
+            startNodeDrag(node, e) {
+                this.isDragging = true;
+                this.dragNode = node;
+                
+                const rect = node.getBoundingClientRect();
+                this.dragOffset = {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+                
+                node.classList.add('selected');
+                e.preventDefault();
+            }
+
+            handleCanvasMouseMove(e) {
+                // 更新临时连线
+                if (this.isConnecting && this.connectionStart && this.tempLine) {
+                    this.updateTempLine(this.connectionStart, e.clientX, e.clientY);
+                }
+                
+                // 处理节点拖拽
+                if (this.isDragging && this.dragNode) {
+                    const canvasRect = this.canvas.getBoundingClientRect();
+                    const x = e.clientX - canvasRect.left - this.dragOffset.x;
+                    const y = e.clientY - canvasRect.top - this.dragOffset.y;
+                    
+                    // 边界检查
+                    const maxX = this.canvas.clientWidth - 120;
+                    const maxY = this.canvas.clientHeight - 80;
+                    
+                    const clampedX = Math.max(0, Math.min(x, maxX));
+                    const clampedY = Math.max(0, Math.min(y, maxY));
+                    
+                    this.dragNode.style.left = clampedX + 'px';
+                    this.dragNode.style.top = clampedY + 'px';
+                    
+                    // 更新节点数据
+                    const nodeData = this.nodes.get(this.dragNode.id);
+                    if (nodeData) {
+                        nodeData.x = clampedX;
+                        nodeData.y = clampedY;
+                    }
+                    
+                    // 实时更新相关连接
+                    this.updateNodeConnections(this.dragNode.id);
                 }
             }
 
-            highlightUserSelection(userId, selection) {
-                // 移除之前的选择高亮
-                const existingHighlight = document.querySelector(`[data-user-selection="${userId}"]`);
-                if (existingHighlight) {
-                    existingHighlight.remove();
-                }
+            updateNodeConnections(nodeId) {
+                // 更新与指定节点相关的所有连接
+                const nodeData = this.nodes.get(nodeId);
+                if (!nodeData) return;
                 
-                if (selection.nodeId) {
-                    const node = document.getElementById(selection.nodeId);
-                    if (node) {
-                        const highlight = document.createElement('div');
-                        highlight.className = 'node-selection';
-                        highlight.setAttribute('data-user-selection', userId);
-                        highlight.style.borderColor = this.users.get(userId).color;
-                        highlight.style.left = node.style.left;
-                        highlight.style.top = node.style.top;
-                        highlight.style.width = node.offsetWidth + 'px';
-                        highlight.style.height = node.offsetHeight + 'px';
-                        
-                        document.getElementById('canvas').appendChild(highlight);
-                        
-                        // 自动移除高亮
-                        setTimeout(() => {
-                            highlight.remove();
-                        }, 2000);
+                nodeData.connections.forEach(connectionId => {
+                    const connection = this.connections.get(connectionId);
+                    if (connection) {
+                        this.updateConnectionPosition(connection);
+                    }
+                });
+            }
+
+            handleCanvasMouseUp(e) {
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    if (this.dragNode) {
+                        this.dragNode.classList.remove('selected');
+                        this.dragNode = null;
                     }
                 }
             }
 
-            updateOnlineUsersList() {
-                const usersList = document.getElementById('usersList');
-                usersList.innerHTML = '';
-                
-                this.users.forEach(user => {
-                    const userItem = document.createElement('div');
-                    userItem.className = 'user-item';
-                    userItem.innerHTML = `
-                        <div class="user-avatar" style="background-color: ${user.color};">
-                            ${user.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span>${user.name}</span>
-                    `;
-                    usersList.appendChild(userItem);
-                });
-            }
-
-            removeUser(userId) {
-                this.users.delete(userId);
-                this.hideUserCursor(userId);
-                
-                const selection = document.querySelector(`[data-user-selection="${userId}"]`);
-                if (selection) {
-                    selection.remove();
+            handleCanvasMouseLeave(e) {
+                // 如果鼠标离开画布，取消所有操作
+                if (this.isConnecting) {
+                    this.cancelConnection();
                 }
                 
-                this.updateOnlineUsersList();
-            }
-        }
-
-        // 变更跟踪器
-        class ChangeTracker {
-            constructor() {
-                this.changes = [];
-                this.maxHistorySize = 100;
-                this.changeIdCounter = 0;
-            }
-
-            trackChange(changeType, data) {
-                const change = {
-                    id: this.generateChangeId(),
-                    type: changeType,
-                    data: data,
-                    timestamp: Date.now(),
-                    userId: collaborationEngine.userId
-                };
-                
-                this.changes.push(change);
-                
-                // 限制历史记录大小
-                if (this.changes.length > this.maxHistorySize) {
-                    this.changes.shift();
-                }
-                
-                return change;
-            }
-
-            generateChangeId() {
-                return `change_${++this.changeIdCounter}_${Date.now()}`;
-            }
-
-            applyRemoteChange(change) {
-                // 记录远程变更，但不触发本地广播
-                this.changes.push({
-                    ...change,
-                    remote: true
-                });
-            }
-
-            getChangeHistory() {
-                return [...this.changes];
-            }
-
-            getLastChange() {
-                return this.changes[this.changes.length - 1];
-            }
-        }
-
-        // 冲突解决器
-        class ConflictResolver {
-            checkConflict(remoteData, localElement) {
-                const localData = this.extractElementData(localElement);
-                
-                // 检查时间戳冲突
-                if (Math.abs(remoteData.timestamp - Date.now()) < 1000) {
-                    return {
-                        id: `conflict_${Date.now()}`,
-                        type: 'concurrent_edit',
-                        local: localData,
-                        remote: remoteData,
-                        message: '检测到并发编辑冲突，请选择要保留的版本。'
-                    };
-                }
-                
-                return null;
-            }
-
-            extractElementData(element) {
-                return {
-                    id: element.id,
-                    position: {
-                        x: parseInt(element.style.left) || 0,
-                        y: parseInt(element.style.top) || 0
-                    },
-                    properties: this.extractProperties(element)
-                };
-            }
-
-            extractProperties(element) {
-                const properties = {};
-                const inputs = element.querySelectorAll('input, select');
-                
-                inputs.forEach(input => {
-                    const property = input.getAttribute('data-property');
-                    if (property) {
-                        properties[property] = input.value;
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    if (this.dragNode) {
+                        this.dragNode.classList.remove('selected');
+                        this.dragNode = null;
                     }
+                }
+            }
+
+            clearSelection() {
+                const selectedNodes = this.canvas.querySelectorAll('.node.selected');
+                selectedNodes.forEach(node => node.classList.remove('selected'));
+            }
+
+            updateStatus() {
+                document.getElementById('node-count').textContent = `节点数量: ${this.nodes.size}`;
+                document.getElementById('connection-count').textContent = `连接数量: ${this.connections.size}`;
+            }
+
+            // 删除节点和相关连接
+            deleteNode(nodeId) {
+                const nodeData = this.nodes.get(nodeId);
+                if (!nodeData) return;
+                
+                // 删除相关连接
+                const connectionsToDelete = Array.from(nodeData.connections);
+                connectionsToDelete.forEach(connectionId => {
+                    this.deleteConnection(connectionId);
                 });
                 
-                return properties;
-            }
-        }
-
-        // 协作UI管理器
-        class CollaborationUI {
-            showConflictDialog(conflictData) {
-                const existingDialog = document.querySelector('.conflict-dialog');
-                if (existingDialog) {
-                    existingDialog.remove();
-                }
+                // 删除节点元素
+                nodeData.element.remove();
+                this.nodes.delete(nodeId);
                 
-                const dialog = document.createElement('div');
-                dialog.className = 'conflict-dialog';
-                dialog.innerHTML = `
-                    <h3>编辑冲突</h3>
-                    <p>${conflictData.message}</p>
-                    <div class="conflict-details">
-                        <div><strong>本地版本:</strong> ${JSON.stringify(conflictData.local, null, 2)}</div>
-                        <div><strong>远程版本:</strong> ${JSON.stringify(conflictData.remote, null, 2)}</div>
-                    </div>
-                    <div class="conflict-actions">
-                        <button class="conflict-btn accept" onclick="resolveConflict('${conflictData.id}', 'accept_remote')">接受远程</button>
-                        <button class="conflict-btn reject" onclick="resolveConflict('${conflictData.id}', 'keep_local')">保留本地</button>
-                    </div>
-                `;
-                
-                document.body.appendChild(dialog);
+                this.updateStatus();
             }
 
-            hideConflictDialog() {
-                const dialog = document.querySelector('.conflict-dialog');
-                if (dialog) {
-                    dialog.remove();
+            // 删除连接
+            deleteConnection(connectionId) {
+                const connection = this.connections.get(connectionId);
+                if (!connection) return;
+                
+                // 从节点的连接记录中移除
+                const startNode = this.nodes.get(connection.startNodeId);
+                const endNode = this.nodes.get(connection.endNodeId);
+                
+                if (startNode) {
+                    startNode.connections.delete(connectionId);
                 }
+                if (endNode) {
+                    endNode.connections.delete(connectionId);
+                }
+                
+                // 删除SVG元素
+                if (connection.element && connection.element.parentNode) {
+                    connection.element.parentNode.removeChild(connection.element);
+                }
+                
+                this.connections.delete(connectionId);
+                this.updateStatus();
             }
         }
 
         // 全局实例
-        let wsManager, collaborationEngine, presenceManager, changeTracker, collaborationUI;
-        let nodeCounter = 0;
-        let selectedNode = null;
-        let isConnecting = false;
-        let tempConnection = null;
+        let workflowCanvas;
 
-        // 初始化协作系统
-        function initCollaboration() {
-            wsManager = new WebSocketManager();
-            collaborationEngine = new CollaborationEngine(wsManager);
-            presenceManager = new PresenceManager();
-            changeTracker = new ChangeTracker();
-            collaborationUI = new CollaborationUI();
-            
-            // 尝试连接到WebSocket服务器
-            wsManager.connect().catch(error => {
-                console.log('WebSocket连接失败，将在离线模式下工作:', error.message);
-            });
-            
-            // 监听鼠标移动以发送光标位置
-            document.addEventListener('mousemove', (e) => {
-                if (wsManager.ws && wsManager.ws.readyState === WebSocket.OPEN) {
-                    wsManager.send({
-                        type: 'user_presence',
-                        userId: collaborationEngine.userId,
-                        data: {
-                            cursor: { x: e.clientX, y: e.clientY },
-                            name: `用户${collaborationEngine.userId.slice(-4)}`
-                        }
-                    });
-                }
-            });
-        }
-
-        // 创建节点
-        function createNode(type) {
-            const canvas = document.getElementById('canvas');
-            const node = document.createElement('div');
-            const nodeId = `node_${++nodeCounter}_${Date.now()}`;
-            
-            node.className = `node ${type}-node`;
-            node.id = nodeId;
-            node.style.left = Math.random() * (canvas.offsetWidth - 200) + 'px';
-            node.style.top = Math.random() * (canvas.offsetHeight - 150) + 'px';
-            
-            const typeNames = {
-                'input': '输入节点',
-                'process': '处理节点',
-                'output': '输出节点'
-            };
-            
-            node.innerHTML = `
-                <div class="node-header">${typeNames[type]}</div>
-                <div class="node-content">
-                    <div class="node-input">
-                        <label>节点名称</label>
-                        <input type="text" value="${typeNames[type]}" data-property="name" onchange="updateNodeProperty('${nodeId}', 'name', this.value)">
-                    </div>
-                    ${type === 'input' ? `
-                        <div class="node-input">
-                            <label>数据类型</label>
-                            <select data-property="dataType" onchange="updateNodeProperty('${nodeId}', 'dataType', this.value)">
-                                <option value="text">文本</option>
-                                <option value="number">数字</option>
-                                <option value="file">文件</option>
-                            </select>
-                        </div>
-                    ` : ''}
-                    ${type === 'process' ? `
-                        <div class="node-input">
-                            <label>处理类型</label>
-                            <select data-property="processType" onchange="updateNodeProperty('${nodeId}', 'processType', this.value)">
-                                <option value="transform">转换</option>
-                                <option value="filter">过滤</option>
-                                <option value="aggregate">聚合</option>
-                            </select>
-                        </div>
-                    ` : ''}
-                </div>
-                <div class="connection-point input-point" style="top: 50%;"></div>
-                <div class="connection-point output-point" style="top: 50%;"></div>
-            `;
-            
-            canvas.appendChild(node);
-            makeNodeDraggable(node);
-            setupConnectionPoints(node);
-            
-            // 跟踪变更并广播
-            const change = changeTracker.trackChange('node_create', {
-                id: nodeId,
-                type: type,
-                position: {
-                    x: parseInt(node.style.left),
-                    y: parseInt(node.style.top)
-                },
-                name: typeNames[type]
-            });
-            
-            if (collaborationEngine) {
-                collaborationEngine.broadcastChange({
-                    type: 'node_update',
-                    data: {
-                        id: nodeId,
-                        type: type,
-                        action: 'create',
-                        position: {
-                            x: parseInt(node.style.left),
-                            y: parseInt(node.style.top)
-                        },
-                        name: typeNames[type]
-                    }
-                });
-            }
-        }
-
-        // 更新节点属性
-        function updateNodeProperty(nodeId, property, value) {
-            const change = changeTracker.trackChange('node_property_update', {
-                nodeId: nodeId,
-                property: property,
-                value: value
-            });
-            
-            if (collaborationEngine) {
-                collaborationEngine.broadcastChange({
-                    type: 'node_update',
-                    data: {
-                        id: nodeId,
-                        action: 'update',
-                        properties: {
-                            [property]: value
-                        }
-                    }
-                });
-            }
-        }
-
-        // 使节点可拖拽
-        function makeNodeDraggable(node) {
-            let isDragging = false;
-            let startX, startY, initialX, initialY;
-            
-            node.addEventListener('mousedown', (e) => {
-                if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-                
-                isDragging = true;
-                startX = e.clientX;
-                startY = e.clientY;
-                initialX = parseInt(node.style.left) || 0;
-                initialY = parseInt(node.style.top) || 0;
-                
-                node.style.zIndex = 1000;
-                selectedNode = node;
-                
-                // 高亮选中的节点
-                document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
-                node.classList.add('selected');
-                
-                // 广播选择状态
-                if (collaborationEngine) {
-                    wsManager.send({
-                        type: 'user_presence',
-                        userId: collaborationEngine.userId,
-                        data: {
-                            selection: { nodeId: node.id },
-                            name: `用户${collaborationEngine.userId.slice(-4)}`
-                        }
-                    });
-                }
-                
-                e.preventDefault();
-            });
-            
-            document.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
-                
-                const deltaX = e.clientX - startX;
-                const deltaY = e.clientY - startY;
-                
-                const newX = Math.max(0, initialX + deltaX);
-                const newY = Math.max(0, initialY + deltaY);
-                
-                node.style.left = newX + 'px';
-                node.style.top = newY + 'px';
-                
-                updateConnections(node);
-            });
-            
-            document.addEventListener('mouseup', () => {
-                if (isDragging) {
-                    isDragging = false;
-                    node.style.zIndex = '';
-                    
-                    // 跟踪移动变更
-                    const change = changeTracker.trackChange('node_move', {
-                        nodeId: node.id,
-                        position: {
-                            x: parseInt(node.style.left),
-                            y: parseInt(node.style.top)
-                        }
-                    });
-                    
-                    // 广播位置更新
-                    if (collaborationEngine) {
-                        collaborationEngine.broadcastChange({
-                            type: 'node_update',
-                            data: {
-                                id: node.id,
-                                action: 'move',
-                                position: {
-                                    x: parseInt(node.style.left),
-                                    y: parseInt(node.style.top)
-                                }
-                            }
-                        });
-                    }
-                }
-            });
-        }
-
-        // 设置连接点
-        function setupConnectionPoints(node) {
-            const inputPoint = node.querySelector('.input-point');
-            const outputPoint = node.querySelector('.output-point');
-            
-            outputPoint.addEventListener('mousedown', (e) => {
-                e.stopPropagation();
-                startConnection(node, outputPoint, e);
-            });
-            
-            inputPoint.addEventListener('mouseup', (e) => {
-                e.stopPropagation();
-                endConnection(node, inputPoint);
-            });
-        }
-
-        // 开始连接
-        function startConnection(fromNode, fromPoint, e) {
-            isConnecting = true;
-            
-            const svg = document.getElementById('connections');
-            tempConnection = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            tempConnection.setAttribute('class', 'temp-connection');
-            svg.appendChild(tempConnection);
-            
-            const canvasRect = document.getElementById('canvas').getBoundingClientRect();
-            const fromRect = fromPoint.getBoundingClientRect();
-            
-            const startX = fromRect.left + fromRect.width / 2 - canvasRect.left;
-            const startY = fromRect.top + fromRect.height / 2 - canvasRect.top;
-            
-            document.addEventListener('mousemove', updateTempConnection);
-            document.addEventListener('mouseup', cancelConnection);
-            
-            function updateTempConnection(e) {
-                if (!tempConnection) return;
-                
-                const endX = e.clientX - canvasRect.left;
-                const endY = e.clientY - canvasRect.top;
-                
-                const controlX1 = startX + (endX - startX) / 3;
-                const controlY1 = startY;
-                const controlX2 = startX + 2 * (endX - startX) / 3;
-                const controlY2 = endY;
-                
-                const path = `M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`;
-                tempConnection.setAttribute('d', path);
-            }
-            
-            function cancelConnection() {
-                if (tempConnection) {
-                    tempConnection.remove();
-                    tempConnection = null;
-                }
-                isConnecting = false;
-                document.removeEventListener('mousemove', updateTempConnection);
-                document.removeEventListener('mouseup', cancelConnection);
-            }
-        }
-
-        // 结束连接
-        function endConnection(toNode, toPoint) {
-            if (!isConnecting || !tempConnection) return;
-            
-            // 创建永久连接
-            tempConnection.setAttribute('class', 'established-connection');
-            tempConnection.setAttribute('data-from', selectedNode.id);
-            tempConnection.setAttribute('data-to', toNode.id);
-            
-            const connectionId = `conn_${Date.now()}`;
-            tempConnection.setAttribute('data-connection-id', connectionId);
-            
-            // 跟踪连接变更
-            const change = changeTracker.trackChange('connection_create', {
-                id: connectionId,
-                from: selectedNode.id,
-                to: toNode.id
-            });
-            
-            // 广播连接创建
-            if (collaborationEngine) {
-                collaborationEngine.broadcastChange({
-                    type: 'connection_update',
-                    data: {
-                        id: connectionId,
-                        action: 'create',
-                        from: selectedNode.id,
-                        to: toNode.id
-                    }
-                });
-            }
-            
-            tempConnection = null;
-            isConnecting = false;
-            
-            document.removeEventListener('mousemove', updateTempConnection);
-            document.removeEventListener('mouseup', cancelConnection);
-        }
-
-        // 更新连接线
-        function updateConnections(node) {
-            const connections = document.querySelectorAll(`[data-from="${node.id}"], [data-to="${node.id}"]`);
-            
-            connections.forEach(connection => {
-                const fromNodeId = connection.getAttribute('data-from');
-                const toNodeId = connection.getAttribute('data-to');
-                updateConnectionPath(connection, fromNodeId, toNodeId);
-            });
-        }
-
-        // 更新连接路径
-        function updateConnectionPath(line, fromNodeId, toNodeId) {
-            const fromNode = document.getElementById(fromNodeId);
-            const toNode = document.getElementById(toNodeId);
-            
-            if (!fromNode || !toNode) return;
-            
-            const canvasRect = document.getElementById('canvas').getBoundingClientRect();
-            const fromRect = fromNode.getBoundingClientRect();
-            const toRect = toNode.getBoundingClientRect();
-            
-            const startX = fromRect.right - canvasRect.left;
-            const startY = fromRect.top + fromRect.height / 2 - canvasRect.top;
-            const endX = toRect.left - canvasRect.left;
-            const endY = toRect.top + toRect.height / 2 - canvasRect.top;
-            
-            const controlX1 = startX + (endX - startX) / 3;
-            const controlY1 = startY;
-            const controlX2 = startX + 2 * (endX - startX) / 3;
-            const controlY2 = endY;
-            
-            const path = `M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`;
-            line.setAttribute('d', path);
-        }
-
-        // 解决冲突
-        function resolveConflict(conflictId, resolution) {
-            if (collaborationEngine) {
-                collaborationEngine.resolveConflict({ id: conflictId }, resolution);
-            }
-            collaborationUI.hideConflictDialog();
-        }
-
-        // 页面加载完成后初始化
+        // 初始化
         document.addEventListener('DOMContentLoaded', () => {
-            initCollaboration();
-            
-            // 添加键盘快捷键
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Delete' && selectedNode) {
-                    // 删除选中的节点
-                    const nodeId = selectedNode.id;
-                    selectedNode.remove();
-                    
-                    // 删除相关连接
-                    const connections = document.querySelectorAll(`[data-from="${nodeId}"], [data-to="${nodeId}"]`);
-                    connections.forEach(conn => conn.remove());
-                    
-                    // 跟踪删除变更
-                    const change = changeTracker.trackChange('node_delete', {
-                        nodeId: nodeId
-                    });
-                    
-                    // 广播删除
-                    if (collaborationEngine) {
-                        collaborationEngine.broadcastChange({
-                            type: 'node_update',
-                            data: {
-                                id: nodeId,
-                                action: 'delete'
-                            }
-                        });
-                    }
-                    
-                    selectedNode = null;
+            workflowCanvas = new WorkflowCanvas();
+        });
+
+        // 全局函数
+        function createNode(type) {
+            if (workflowCanvas) {
+                workflowCanvas.createNode(type);
+            }
+        }
+
+        // 键盘事件处理
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (workflowCanvas && workflowCanvas.isConnecting) {
+                    workflowCanvas.cancelConnection();
                 }
-            });
+            }
+        });
+
+        // 窗口大小改变时更新连接
+        window.addEventListener('resize', () => {
+            if (workflowCanvas) {
+                setTimeout(() => {
+                    workflowCanvas.updateAllConnections();
+                }, 100);
+            }
         });
     </script>
 </body>
