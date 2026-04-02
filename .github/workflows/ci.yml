@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main, develop ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 jobs:
   test:
@@ -18,7 +18,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Use Node.js ${{ matrix.node-version }}
+    - name: Setup Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
@@ -31,19 +31,27 @@ jobs:
       run: npm run lint
     
     - name: Run tests
-      run: npm test
+      run: npm run test
     
     - name: Run build
       run: npm run build
     
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
       with:
-        file: ./coverage/lcov.info
-        flags: unittests
-        name: codecov-umbrella
+        name: test-results-${{ matrix.node-version }}
+        path: |
+          coverage/
+          test-results.xml
     
-  security:
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts-${{ matrix.node-version }}
+        path: dist/
+
+  security-scan:
     runs-on: ubuntu-latest
     
     steps:
@@ -51,40 +59,11 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Run security audit
-      run: npm audit --audit-level high
+      run: npm audit --audit-level moderate
     
-    - name: Run Snyk to check for vulnerabilities
+    - name: Run Snyk security scan
       uses: snyk/actions/node@master
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         args: --severity-threshold=high
-    
-  docker:
-    runs-on: ubuntu-latest
-    needs: [test, security]
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-    
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile.production
-        push: true
-        tags: |
-          ${{ secrets.DOCKER_USERNAME }}/user-auth-system:latest
-          ${{ secrets.DOCKER_USERNAME }}/user-auth-system:${{ github.sha }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
