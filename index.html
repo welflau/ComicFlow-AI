@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>基础组件库演示</title>
+    <title>3D画布组件</title>
+    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://unpkg.com/three@0.158.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://unpkg.com/vue@3.3.8/dist/vue.global.js"></script>
     <style>
         * {
             margin: 0;
@@ -12,739 +16,953 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #f5f5f5;
-            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            padding: 30px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-
-        .demo-section {
-            margin-bottom: 40px;
-            padding: 20px;
-            border: 1px solid #e8e8e8;
-            border-radius: 6px;
-        }
-
-        .demo-section h2 {
-            color: #666;
-            margin-bottom: 20px;
-            font-size: 18px;
-        }
-
-        .demo-row {
-            margin-bottom: 15px;
+        .app-container {
             display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
+            height: 100vh;
         }
 
-        /* Button 组件样式 */
-        .base-button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid transparent;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 14px;
-            font-weight: 500;
-            text-decoration: none;
-            outline: none;
+        .control-panel {
+            width: 300px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .canvas-container {
+            flex: 1;
             position: relative;
             overflow: hidden;
         }
 
-        .base-button:disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
+        .three-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
         }
 
-        /* Button 尺寸 */
-        .base-button--small {
-            height: 28px;
-            padding: 0 12px;
-            font-size: 12px;
+        .control-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
-        .base-button--medium {
-            height: 36px;
-            padding: 0 16px;
-            font-size: 14px;
-        }
-
-        .base-button--large {
-            height: 44px;
-            padding: 0 20px;
+        .control-group h3 {
+            margin-bottom: 10px;
+            color: #333;
             font-size: 16px;
         }
 
-        /* Button 类型 */
-        .base-button--primary {
-            background-color: #1890ff;
-            border-color: #1890ff;
-            color: white;
-        }
-
-        .base-button--primary:hover:not(:disabled) {
-            background-color: #40a9ff;
-            border-color: #40a9ff;
-        }
-
-        .base-button--secondary {
-            background-color: white;
-            border-color: #d9d9d9;
-            color: #333;
-        }
-
-        .base-button--secondary:hover:not(:disabled) {
-            border-color: #1890ff;
-            color: #1890ff;
-        }
-
-        .base-button--danger {
-            background-color: #ff4d4f;
-            border-color: #ff4d4f;
-            color: white;
-        }
-
-        .base-button--danger:hover:not(:disabled) {
-            background-color: #ff7875;
-            border-color: #ff7875;
-        }
-
-        .base-button--text {
-            background-color: transparent;
-            border-color: transparent;
-            color: #1890ff;
-        }
-
-        .base-button--text:hover:not(:disabled) {
-            background-color: #f0f8ff;
-        }
-
-        /* Loading 动画 */
-        .loading-spinner {
-            width: 14px;
-            height: 14px;
-            border: 2px solid transparent;
-            border-top: 2px solid currentColor;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 6px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Input 组件样式 */
-        .base-input {
-            position: relative;
-            display: inline-block;
-            width: 200px;
-        }
-
-        .base-input__inner {
-            width: 100%;
-            height: 36px;
-            padding: 0 12px;
-            border: 1px solid #d9d9d9;
-            border-radius: 4px;
-            font-size: 14px;
-            transition: all 0.3s;
-            outline: none;
-        }
-
-        .base-input__inner:focus {
-            border-color: #1890ff;
-            box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
-        }
-
-        .base-input__inner:disabled {
-            background-color: #f5f5f5;
-            cursor: not-allowed;
-        }
-
-        .base-input__inner.error {
-            border-color: #ff4d4f;
-        }
-
-        .base-input__inner.error:focus {
-            box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
-        }
-
-        .base-input__error {
-            color: #ff4d4f;
-            font-size: 12px;
-            margin-top: 4px;
-        }
-
-        /* Modal 组件样式 */
-        .base-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1000;
+        .control-row {
             display: flex;
             align-items: center;
-            justify-content: center;
+            margin-bottom: 10px;
         }
 
-        .base-modal__mask {
+        .control-row label {
+            width: 80px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .control-row input, .control-row select, .control-row button {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .control-row button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .control-row button:hover {
+            transform: translateY(-2px);
+        }
+
+        .color-input {
+            width: 50px !important;
+            height: 35px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        .loading-overlay {
             position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-        }
-
-        .base-modal__container {
-            position: relative;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            max-height: 80vh;
-            overflow: hidden;
-            animation: modalFadeIn 0.3s ease-out;
-        }
-
-        @keyframes modalFadeIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9) translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-
-        .base-modal__header {
-            padding: 20px 24px 16px;
-            border-bottom: 1px solid #e8e8e8;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            z-index: 1000;
         }
 
-        .base-modal__title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .base-modal__close {
-            background: none;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-            color: #999;
-            padding: 4px;
-            border-radius: 4px;
-            transition: all 0.3s;
-        }
-
-        .base-modal__close:hover {
-            background-color: #f5f5f5;
-            color: #333;
-        }
-
-        .base-modal__body {
-            padding: 20px 24px;
-            max-height: 60vh;
-            overflow-y: auto;
-        }
-
-        .base-modal__footer {
-            padding: 16px 24px 20px;
-            border-top: 1px solid #e8e8e8;
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-        }
-
-        .hidden {
-            display: none !important;
+        .stats {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
         }
     </style>
 </head>
 <body>
     <div id="app">
-        <div class="container">
-            <h1>基础组件库演示</h1>
-            
-            <!-- Button 组件演示 -->
-            <div class="demo-section">
-                <h2>Button 按钮组件</h2>
-                <div class="demo-row">
-                    <span>不同类型：</span>
-                    <base-button type="primary" @click="handleClick">主要按钮</base-button>
-                    <base-button type="secondary" @click="handleClick">次要按钮</base-button>
-                    <base-button type="danger" @click="handleClick">危险按钮</base-button>
-                    <base-button type="text" @click="handleClick">文本按钮</base-button>
+        <div class="app-container">
+            <div class="control-panel">
+                <div class="control-group">
+                    <h3>场景控制</h3>
+                    <div class="control-row">
+                        <label>背景色:</label>
+                        <input type="color" v-model="sceneConfig.backgroundColor" @change="updateBackground" class="color-input">
+                    </div>
+                    <div class="control-row">
+                        <label>环境光:</label>
+                        <input type="range" min="0" max="2" step="0.1" v-model="sceneConfig.ambientLight" @input="updateLighting">
+                    </div>
+                    <div class="control-row">
+                        <label>方向光:</label>
+                        <input type="range" min="0" max="2" step="0.1" v-model="sceneConfig.directionalLight" @input="updateLighting">
+                    </div>
                 </div>
-                <div class="demo-row">
-                    <span>不同尺寸：</span>
-                    <base-button type="primary" size="small">小按钮</base-button>
-                    <base-button type="primary" size="medium">中按钮</base-button>
-                    <base-button type="primary" size="large">大按钮</base-button>
+
+                <div class="control-group">
+                    <h3>相机控制</h3>
+                    <div class="control-row">
+                        <button @click="resetCamera">重置视角</button>
+                    </div>
+                    <div class="control-row">
+                        <label>FOV:</label>
+                        <input type="range" min="10" max="120" v-model="cameraConfig.fov" @input="updateCamera">
+                    </div>
+                    <div class="control-row">
+                        <label>位置X:</label>
+                        <input type="range" min="-20" max="20" step="0.5" v-model="cameraConfig.x" @input="updateCameraPosition">
+                    </div>
+                    <div class="control-row">
+                        <label>位置Y:</label>
+                        <input type="range" min="-20" max="20" step="0.5" v-model="cameraConfig.y" @input="updateCameraPosition">
+                    </div>
+                    <div class="control-row">
+                        <label>位置Z:</label>
+                        <input type="range" min="-20" max="20" step="0.5" v-model="cameraConfig.z" @input="updateCameraPosition">
+                    </div>
                 </div>
-                <div class="demo-row">
-                    <span>状态：</span>
-                    <base-button type="primary" :disabled="true">禁用按钮</base-button>
-                    <base-button type="primary" :loading="buttonLoading" @click="toggleLoading">{{buttonLoading ? '加载中...' : '点击加载'}}</base-button>
+
+                <div class="control-group">
+                    <h3>对象管理</h3>
+                    <div class="control-row">
+                        <button @click="addCube">添加立方体</button>
+                    </div>
+                    <div class="control-row">
+                        <button @click="addSphere">添加球体</button>
+                    </div>
+                    <div class="control-row">
+                        <button @click="addTorus">添加圆环</button>
+                    </div>
+                    <div class="control-row">
+                        <button @click="clearScene">清空场景</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>资源加载</h3>
+                    <div class="control-row">
+                        <input type="file" @change="loadModel" accept=".gltf,.glb" style="display: none;" ref="fileInput">
+                        <button @click="$refs.fileInput.click()">加载模型</button>
+                    </div>
+                    <div class="control-row">
+                        <input type="file" @change="loadTexture" accept="image/*" style="display: none;" ref="textureInput">
+                        <button @click="$refs.textureInput.click()">加载纹理</button>
+                    </div>
+                    <div v-if="loadProgress > 0" class="progress-bar">
+                        <div class="progress-fill" :style="{width: loadProgress + '%'}"></div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>渲染设置</h3>
+                    <div class="control-row">
+                        <label>阴影:</label>
+                        <input type="checkbox" v-model="renderConfig.shadows" @change="toggleShadows">
+                    </div>
+                    <div class="control-row">
+                        <label>抗锯齿:</label>
+                        <input type="checkbox" v-model="renderConfig.antialias" @change="updateRenderer">
+                    </div>
+                    <div class="control-row">
+                        <label>像素比:</label>
+                        <input type="range" min="0.5" max="2" step="0.1" v-model="renderConfig.pixelRatio" @input="updatePixelRatio">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>场景导出</h3>
+                    <div class="control-row">
+                        <button @click="exportScene">导出场景</button>
+                    </div>
+                    <div class="control-row">
+                        <input type="file" @change="importScene" accept=".json" style="display: none;" ref="sceneInput">
+                        <button @click="$refs.sceneInput.click()">导入场景</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Input 组件演示 -->
-            <div class="demo-section">
-                <h2>Input 输入框组件</h2>
-                <div class="demo-row">
-                    <span>基础输入：</span>
-                    <base-input v-model="inputValue1" placeholder="请输入内容"></base-input>
-                    <span>当前值：{{inputValue1}}</span>
+            <div class="canvas-container">
+                <canvas ref="canvas" class="three-canvas"></canvas>
+                <div v-if="isLoading" class="loading-overlay">
+                    <div>加载中... {{ Math.round(loadProgress) }}%</div>
                 </div>
-                <div class="demo-row">
-                    <span>密码输入：</span>
-                    <base-input v-model="inputValue2" type="password" placeholder="请输入密码"></base-input>
-                </div>
-                <div class="demo-row">
-                    <span>禁用状态：</span>
-                    <base-input v-model="inputValue3" :disabled="true" placeholder="禁用输入框"></base-input>
-                </div>
-                <div class="demo-row">
-                    <span>验证输入：</span>
-                    <base-input 
-                        v-model="inputValue4" 
-                        placeholder="请输入邮箱" 
-                        :rules="emailRules"
-                        @blur="validateEmail"
-                    ></base-input>
-                </div>
-            </div>
-
-            <!-- Modal 组件演示 -->
-            <div class="demo-section">
-                <h2>Modal 模态框组件</h2>
-                <div class="demo-row">
-                    <base-button type="primary" @click="showModal1 = true">基础模态框</base-button>
-                    <base-button type="primary" @click="showModal2 = true">自定义模态框</base-button>
-                    <base-button type="primary" @click="showModal3 = true">确认对话框</base-button>
+                <div class="stats">
+                    <div>FPS: {{ fps }}</div>
+                    <div>Objects: {{ objectCount }}</div>
+                    <div>Triangles: {{ triangleCount }}</div>
                 </div>
             </div>
         </div>
-
-        <!-- Modal 实例 -->
-        <base-modal 
-            :visible="showModal1" 
-            title="基础模态框" 
-            @close="showModal1 = false"
-            @confirm="handleModal1Confirm"
-        >
-            <p>这是一个基础的模态框内容。</p>
-            <p>可以放置任何内容。</p>
-        </base-modal>
-
-        <base-modal 
-            :visible="showModal2" 
-            title="自定义模态框" 
-            width="600px"
-            @close="showModal2 = false"
-        >
-            <template #header>
-                <div style="color: #1890ff; font-weight: bold;">🎉 自定义标题</div>
-            </template>
-            <div>
-                <h3>自定义内容区域</h3>
-                <p>这里可以放置复杂的内容结构。</p>
-                <base-input v-model="modalInput" placeholder="模态框中的输入框"></base-input>
-            </div>
-            <template #footer>
-                <base-button type="secondary" @click="showModal2 = false">取消</base-button>
-                <base-button type="primary" @click="handleModal2Confirm">确定</base-button>
-            </template>
-        </base-modal>
-
-        <base-modal 
-            :visible="showModal3" 
-            title="确认对话框" 
-            width="400px"
-            @close="showModal3 = false"
-        >
-            <p>确定要执行此操作吗？</p>
-            <template #footer>
-                <base-button type="secondary" @click="showModal3 = false">取消</base-button>
-                <base-button type="danger" @click="handleModal3Confirm">确定</base-button>
-            </template>
-        </base-modal>
     </div>
 
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script>
-        const { createApp, ref, computed } = Vue;
+        const { createApp, ref, onMounted, onUnmounted } = Vue;
 
-        // BaseButton 组件
-        const BaseButton = {
-            name: 'BaseButton',
-            props: {
-                type: {
-                    type: String,
-                    default: 'secondary',
-                    validator: (value) => ['primary', 'secondary', 'danger', 'text'].includes(value)
-                },
-                size: {
-                    type: String,
-                    default: 'medium',
-                    validator: (value) => ['small', 'medium', 'large'].includes(value)
-                },
-                disabled: {
-                    type: Boolean,
-                    default: false
-                },
-                loading: {
-                    type: Boolean,
-                    default: false
-                }
-            },
-            emits: ['click', 'focus', 'blur'],
-            setup(props, { emit, slots }) {
-                const buttonClass = computed(() => {
-                    return [
-                        'base-button',
-                        `base-button--${props.type}`,
-                        `base-button--${props.size}`
-                    ];
+        // AssetLoader 类
+        class AssetLoader {
+            constructor() {
+                this.gltfLoader = new THREE.GLTFLoader();
+                this.textureLoader = new THREE.TextureLoader();
+                this.loadProgress = 0;
+                this.onProgress = null;
+            }
+
+            async loadGLTF(file) {
+                return new Promise((resolve, reject) => {
+                    const url = URL.createObjectURL(file);
+                    this.gltfLoader.load(
+                        url,
+                        (gltf) => {
+                            URL.revokeObjectURL(url);
+                            resolve(gltf.scene);
+                        },
+                        (progress) => {
+                            this.loadProgress = (progress.loaded / progress.total) * 100;
+                            if (this.onProgress) this.onProgress(this.loadProgress);
+                        },
+                        (error) => {
+                            URL.revokeObjectURL(url);
+                            reject(error);
+                        }
+                    );
                 });
+            }
 
-                const handleClick = (event) => {
-                    if (!props.disabled && !props.loading) {
-                        emit('click', event);
-                    }
-                };
+            async loadTexture(file) {
+                return new Promise((resolve, reject) => {
+                    const url = URL.createObjectURL(file);
+                    this.textureLoader.load(
+                        url,
+                        (texture) => {
+                            URL.revokeObjectURL(url);
+                            resolve(texture);
+                        },
+                        undefined,
+                        (error) => {
+                            URL.revokeObjectURL(url);
+                            reject(error);
+                        }
+                    );
+                });
+            }
 
-                const handleFocus = (event) => {
-                    emit('focus', event);
-                };
+            getLoadProgress() {
+                return this.loadProgress;
+            }
+        }
 
-                const handleBlur = (event) => {
-                    emit('blur', event);
-                };
+        // CameraController 类
+        class CameraController {
+            constructor(camera, canvas) {
+                this.camera = camera;
+                this.controls = new THREE.OrbitControls(camera, canvas);
+                this.enableOrbitControls();
+            }
 
-                return {
-                    buttonClass,
-                    handleClick,
-                    handleFocus,
-                    handleBlur
-                };
-            },
-            template: `
-                <button 
-                    :class="buttonClass"
-                    :disabled="disabled || loading"
-                    @click="handleClick"
-                    @focus="handleFocus"
-                    @blur="handleBlur"
-                >
-                    <span v-if="loading" class="loading-spinner"></span>
-                    <slot name="icon"></slot>
-                    <slot></slot>
-                </button>
-            `
-        };
+            setPosition(x, y, z) {
+                this.camera.position.set(x, y, z);
+                this.controls.update();
+            }
 
-        // BaseInput 组件
-        const BaseInput = {
-            name: 'BaseInput',
-            props: {
-                modelValue: {
-                    type: [String, Number],
-                    default: ''
-                },
-                type: {
-                    type: String,
-                    default: 'text'
-                },
-                placeholder: {
-                    type: String,
-                    default: ''
-                },
-                disabled: {
-                    type: Boolean,
-                    default: false
-                },
-                readonly: {
-                    type: Boolean,
-                    default: false
-                },
-                rules: {
-                    type: Array,
-                    default: () => []
+            lookAt(target) {
+                this.camera.lookAt(target);
+                this.controls.update();
+            }
+
+            enableOrbitControls() {
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.enableZoom = true;
+                this.controls.enableRotate = true;
+                this.controls.enablePan = true;
+            }
+
+            resetView() {
+                this.camera.position.set(5, 5, 5);
+                this.camera.lookAt(0, 0, 0);
+                this.controls.reset();
+            }
+
+            update() {
+                this.controls.update();
+            }
+        }
+
+        // SceneManager 类
+        class SceneManager {
+            constructor() {
+                this.scene = this.createScene();
+                this.objects = [];
+                this.ambientLight = null;
+                this.directionalLight = null;
+                this.setupLighting();
+            }
+
+            createScene() {
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x222222);
+                return scene;
+            }
+
+            setupLighting() {
+                this.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                this.scene.add(this.ambientLight);
+
+                this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                this.directionalLight.position.set(5, 5, 5);
+                this.directionalLight.castShadow = true;
+                this.directionalLight.shadow.mapSize.width = 2048;
+                this.directionalLight.shadow.mapSize.height = 2048;
+                this.scene.add(this.directionalLight);
+            }
+
+            updateLighting(ambientIntensity, directionalIntensity) {
+                if (this.ambientLight) {
+                    this.ambientLight.intensity = ambientIntensity;
                 }
-            },
-            emits: ['update:modelValue', 'input', 'change', 'focus', 'blur'],
-            setup(props, { emit }) {
-                const errorMessage = ref('');
-                const hasError = computed(() => !!errorMessage.value);
+                if (this.directionalLight) {
+                    this.directionalLight.intensity = directionalIntensity;
+                }
+            }
 
-                const handleInput = (event) => {
-                    const value = event.target.value;
-                    emit('update:modelValue', value);
-                    emit('input', value);
-                    // 清除错误信息
-                    if (errorMessage.value) {
-                        errorMessage.value = '';
-                    }
-                };
+            setBackground(color) {
+                this.scene.background = new THREE.Color(color);
+            }
 
-                const handleChange = (event) => {
-                    emit('change', event.target.value);
-                };
+            addObject(object) {
+                this.scene.add(object);
+                this.objects.push(object);
+            }
 
-                const handleFocus = (event) => {
-                    emit('focus', event);
-                };
+            removeObject(object) {
+                this.scene.remove(object);
+                const index = this.objects.indexOf(object);
+                if (index > -1) {
+                    this.objects.splice(index, 1);
+                }
+            }
 
-                const handleBlur = (event) => {
-                    emit('blur', event);
-                    validate();
-                };
-
-                const validate = () => {
-                    if (props.rules.length === 0) return true;
-                    
-                    for (const rule of props.rules) {
-                        if (typeof rule === 'function') {
-                            const result = rule(props.modelValue);
-                            if (result !== true) {
-                                errorMessage.value = result;
-                                return false;
-                            }
+            clearObjects() {
+                this.objects.forEach(obj => {
+                    this.scene.remove(obj);
+                    if (obj.geometry) obj.geometry.dispose();
+                    if (obj.material) {
+                        if (Array.isArray(obj.material)) {
+                            obj.material.forEach(mat => mat.dispose());
+                        } else {
+                            obj.material.dispose();
                         }
                     }
+                });
+                this.objects = [];
+            }
+
+            exportScene() {
+                const sceneData = {
+                    objects: this.objects.map(obj => ({
+                        type: obj.geometry.type,
+                        position: obj.position.toArray(),
+                        rotation: obj.rotation.toArray(),
+                        scale: obj.scale.toArray(),
+                        material: {
+                            color: obj.material.color ? obj.material.color.getHex() : 0xffffff,
+                            transparent: obj.material.transparent,
+                            opacity: obj.material.opacity
+                        }
+                    })),
+                    background: this.scene.background.getHex(),
+                    lighting: {
+                        ambient: this.ambientLight.intensity,
+                        directional: this.directionalLight.intensity
+                    }
+                };
+                return sceneData;
+            }
+
+            importScene(data) {
+                this.clearObjects();
+                this.setBackground(`#${data.background.toString(16).padStart(6, '0')}`);
+                this.updateLighting(data.lighting.ambient, data.lighting.directional);
+                
+                data.objects.forEach(objData => {
+                    let geometry;
+                    switch (objData.type) {
+                        case 'BoxGeometry':
+                            geometry = new THREE.BoxGeometry();
+                            break;
+                        case 'SphereGeometry':
+                            geometry = new THREE.SphereGeometry();
+                            break;
+                        case 'TorusGeometry':
+                            geometry = new THREE.TorusGeometry();
+                            break;
+                        default:
+                            geometry = new THREE.BoxGeometry();
+                    }
                     
-                    errorMessage.value = '';
-                    return true;
-                };
-
-                const inputClass = computed(() => {
-                    return {
-                        'base-input__inner': true,
-                        'error': hasError.value
-                    };
+                    const material = new THREE.MeshLambertMaterial({
+                        color: objData.material.color,
+                        transparent: objData.material.transparent,
+                        opacity: objData.material.opacity
+                    });
+                    
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.fromArray(objData.position);
+                    mesh.rotation.fromArray(objData.rotation);
+                    mesh.scale.fromArray(objData.scale);
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                    
+                    this.addObject(mesh);
                 });
+            }
+        }
 
-                return {
-                    errorMessage,
-                    hasError,
-                    inputClass,
-                    handleInput,
-                    handleChange,
-                    handleFocus,
-                    handleBlur,
-                    validate
-                };
-            },
-            template: `
-                <div class="base-input">
-                    <input 
-                        :class="inputClass"
-                        :type="type"
-                        :value="modelValue"
-                        :placeholder="placeholder"
-                        :disabled="disabled"
-                        :readonly="readonly"
-                        @input="handleInput"
-                        @change="handleChange"
-                        @focus="handleFocus"
-                        @blur="handleBlur"
-                    />
-                    <div v-if="hasError" class="base-input__error">{{ errorMessage }}</div>
-                </div>
-            `
-        };
+        // RenderEngine 类
+        class RenderEngine {
+            constructor() {
+                this.renderer = null;
+                this.animationId = null;
+                this.fps = 0;
+                this.frameCount = 0;
+                this.lastTime = performance.now();
+            }
 
-        // BaseModal 组件
-        const BaseModal = {
-            name: 'BaseModal',
-            props: {
-                visible: {
-                    type: Boolean,
-                    default: false
-                },
-                title: {
-                    type: String,
-                    default: ''
-                },
-                width: {
-                    type: String,
-                    default: '500px'
-                },
-                closable: {
-                    type: Boolean,
-                    default: true
+            setRenderer(canvas) {
+                this.renderer = new THREE.WebGLRenderer({ 
+                    canvas: canvas, 
+                    antialias: true,
+                    alpha: true
+                });
+                this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+                this.renderer.setPixelRatio(window.devicePixelRatio);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            }
+
+            enableShadows() {
+                if (this.renderer) {
+                    this.renderer.shadowMap.enabled = true;
                 }
-            },
-            emits: ['close', 'confirm', 'cancel'],
-            setup(props, { emit, slots }) {
-                const handleMaskClick = () => {
-                    if (props.closable) {
-                        emit('close');
-                    }
-                };
+            }
 
-                const handleClose = () => {
-                    emit('close');
-                };
+            disableShadows() {
+                if (this.renderer) {
+                    this.renderer.shadowMap.enabled = false;
+                }
+            }
 
-                const handleConfirm = () => {
-                    emit('confirm');
-                };
+            setPixelRatio(ratio) {
+                if (this.renderer) {
+                    this.renderer.setPixelRatio(ratio);
+                }
+            }
 
-                const handleCancel = () => {
-                    emit('cancel');
-                    emit('close');
-                };
+            resize(width, height) {
+                if (this.renderer) {
+                    this.renderer.setSize(width, height);
+                }
+            }
 
-                const containerStyle = computed(() => {
-                    return {
-                        width: props.width
-                    };
+            render(scene, camera) {
+                if (this.renderer) {
+                    this.renderer.render(scene, camera);
+                    this.updateFPS();
+                }
+            }
+
+            updateFPS() {
+                this.frameCount++;
+                const currentTime = performance.now();
+                if (currentTime - this.lastTime >= 1000) {
+                    this.fps = Math.round((this.frameCount * 1000) / (currentTime - this.lastTime));
+                    this.frameCount = 0;
+                    this.lastTime = currentTime;
+                }
+            }
+
+            animate(callback) {
+                const animate = () => {
+                    this.animationId = requestAnimationFrame(animate);
+                    callback();
+                };
+                animate();
+            }
+
+            dispose() {
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+                if (this.renderer) {
+                    this.renderer.dispose();
+                }
+            }
+        }
+
+        // ThreeCanvas 组件
+        class ThreeCanvas {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.scene = null;
+                this.camera = null;
+                this.sceneManager = null;
+                this.cameraController = null;
+                this.renderEngine = null;
+                this.assetLoader = null;
+                this.initScene();
+            }
+
+            initScene() {
+                // 初始化场景管理器
+                this.sceneManager = new SceneManager();
+                this.scene = this.sceneManager.scene;
+
+                // 初始化相机
+                this.camera = new THREE.PerspectiveCamera(
+                    75,
+                    this.canvas.clientWidth / this.canvas.clientHeight,
+                    0.1,
+                    1000
+                );
+                this.camera.position.set(5, 5, 5);
+
+                // 初始化相机控制器
+                this.cameraController = new CameraController(this.camera, this.canvas);
+
+                // 初始化渲染引擎
+                this.renderEngine = new RenderEngine();
+                this.renderEngine.setRenderer(this.canvas);
+
+                // 初始化资源加载器
+                this.assetLoader = new AssetLoader();
+
+                // 添加默认对象
+                this.addDefaultObjects();
+
+                // 开始渲染循环
+                this.startRenderLoop();
+            }
+
+            addDefaultObjects() {
+                // 添加地面
+                const groundGeometry = new THREE.PlaneGeometry(20, 20);
+                const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x999999 });
+                const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+                ground.rotation.x = -Math.PI / 2;
+                ground.receiveShadow = true;
+                this.sceneManager.addObject(ground);
+
+                // 添加默认立方体
+                const geometry = new THREE.BoxGeometry();
+                const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+                const cube = new THREE.Mesh(geometry, material);
+                cube.position.y = 0.5;
+                cube.castShadow = true;
+                this.sceneManager.addObject(cube);
+            }
+
+            startRenderLoop() {
+                this.renderEngine.animate(() => {
+                    this.cameraController.update();
+                    this.renderEngine.render(this.scene, this.camera);
                 });
+            }
 
-                return {
-                    handleMaskClick,
-                    handleClose,
-                    handleConfirm,
-                    handleCancel,
-                    containerStyle
-                };
-            },
-            template: `
-                <div v-if="visible" class="base-modal">
-                    <div class="base-modal__mask" @click="handleMaskClick"></div>
-                    <div class="base-modal__container" :style="containerStyle" @click.stop>
-                        <div class="base-modal__header" v-if="title || $slots.header">
-                            <slot name="header">
-                                <div class="base-modal__title">{{ title }}</div>
-                            </slot>
-                            <button v-if="closable" class="base-modal__close" @click="handleClose">×</button>
-                        </div>
-                        <div class="base-modal__body">
-                            <slot></slot>
-                        </div>
-                        <div class="base-modal__footer" v-if="$slots.footer">
-                            <slot name="footer"></slot>
-                        </div>
-                        <div class="base-modal__footer" v-else>
-                            <button class="base-button base-button--secondary base-button--medium" @click="handleCancel">取消</button>
-                            <button class="base-button base-button--primary base-button--medium" @click="handleConfirm">确定</button>
-                        </div>
-                    </div>
-                </div>
-            `
-        };
+            resize() {
+                const width = this.canvas.clientWidth;
+                const height = this.canvas.clientHeight;
+                this.camera.aspect = width / height;
+                this.camera.updateProjectionMatrix();
+                this.renderEngine.resize(width, height);
+            }
 
-        // 创建应用
-        const app = createApp({
-            components: {
-                BaseButton,
-                BaseInput,
-                BaseModal
-            },
+            addObject(object) {
+                this.sceneManager.addObject(object);
+            }
+
+            removeObject(object) {
+                this.sceneManager.removeObject(object);
+            }
+
+            dispose() {
+                this.renderEngine.dispose();
+            }
+        }
+
+        // Vue 应用
+        createApp({
             setup() {
-                // 响应式数据
-                const buttonLoading = ref(false);
-                const inputValue1 = ref('');
-                const inputValue2 = ref('');
-                const inputValue3 = ref('禁用的值');
-                const inputValue4 = ref('');
-                const modalInput = ref('');
-                const showModal1 = ref(false);
-                const showModal2 = ref(false);
-                const showModal3 = ref(false);
+                const canvas = ref(null);
+                const fileInput = ref(null);
+                const textureInput = ref(null);
+                const sceneInput = ref(null);
+                
+                let threeCanvas = null;
+                
+                const sceneConfig = ref({
+                    backgroundColor: '#222222',
+                    ambientLight: 0.6,
+                    directionalLight: 0.8
+                });
+                
+                const cameraConfig = ref({
+                    fov: 75,
+                    x: 5,
+                    y: 5,
+                    z: 5
+                });
+                
+                const renderConfig = ref({
+                    shadows: true,
+                    antialias: true,
+                    pixelRatio: 1
+                });
+                
+                const isLoading = ref(false);
+                const loadProgress = ref(0);
+                const fps = ref(0);
+                const objectCount = ref(0);
+                const triangleCount = ref(0);
+                
+                let statsInterval = null;
 
-                // 邮箱验证规则
-                const emailRules = [
-                    (value) => {
-                        if (!value) return '请输入邮箱地址';
-                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                        return emailRegex.test(value) || '请输入有效的邮箱地址';
+                onMounted(() => {
+                    threeCanvas = new ThreeCanvas(canvas.value);
+                    
+                    // 设置资源加载进度回调
+                    threeCanvas.assetLoader.onProgress = (progress) => {
+                        loadProgress.value = progress;
+                    };
+                    
+                    // 窗口大小变化监听
+                    const resizeObserver = new ResizeObserver(() => {
+                        threeCanvas.resize();
+                    });
+                    resizeObserver.observe(canvas.value);
+                    
+                    // 统计信息更新
+                    statsInterval = setInterval(() => {
+                        fps.value = threeCanvas.renderEngine.fps;
+                        objectCount.value = threeCanvas.sceneManager.objects.length;
+                        triangleCount.value = threeCanvas.sceneManager.objects.reduce((count, obj) => {
+                            if (obj.geometry && obj.geometry.attributes.position) {
+                                return count + (obj.geometry.attributes.position.count / 3);
+                            }
+                            return count;
+                        }, 0);
+                    }, 1000);
+                });
+                
+                onUnmounted(() => {
+                    if (threeCanvas) {
+                        threeCanvas.dispose();
                     }
-                ];
-
-                // 事件处理
-                const handleClick = () => {
-                    console.log('按钮被点击了');
+                    if (statsInterval) {
+                        clearInterval(statsInterval);
+                    }
+                });
+                
+                const updateBackground = () => {
+                    if (threeCanvas) {
+                        threeCanvas.sceneManager.setBackground(sceneConfig.value.backgroundColor);
+                    }
                 };
-
-                const toggleLoading = () => {
-                    buttonLoading.value = true;
-                    setTimeout(() => {
-                        buttonLoading.value = false;
-                    }, 2000);
+                
+                const updateLighting = () => {
+                    if (threeCanvas) {
+                        threeCanvas.sceneManager.updateLighting(
+                            parseFloat(sceneConfig.value.ambientLight),
+                            parseFloat(sceneConfig.value.directionalLight)
+                        );
+                    }
                 };
-
-                const validateEmail = () => {
-                    // 触发验证
+                
+                const resetCamera = () => {
+                    if (threeCanvas) {
+                        threeCanvas.cameraController.resetView();
+                        cameraConfig.value = { fov: 75, x: 5, y: 5, z: 5 };
+                    }
                 };
-
-                const handleModal1Confirm = () => {
-                    console.log('模态框1确认');
-                    showModal1.value = false;
+                
+                const updateCamera = () => {
+                    if (threeCanvas) {
+                        threeCanvas.camera.fov = parseFloat(cameraConfig.value.fov);
+                        threeCanvas.camera.updateProjectionMatrix();
+                    }
                 };
-
-                const handleModal2Confirm = () => {
-                    console.log('模态框2确认，输入值：', modalInput.value);
-                    showModal2.value = false;
+                
+                const updateCameraPosition = () => {
+                    if (threeCanvas) {
+                        threeCanvas.cameraController.setPosition(
+                            parseFloat(cameraConfig.value.x),
+                            parseFloat(cameraConfig.value.y),
+                            parseFloat(cameraConfig.value.z)
+                        );
+                    }
                 };
-
-                const handleModal3Confirm = () => {
-                    console.log('执行危险操作');
-                    showModal3.value = false;
+                
+                const addCube = () => {
+                    if (threeCanvas) {
+                        const geometry = new THREE.BoxGeometry();
+                        const material = new THREE.MeshLambertMaterial({ 
+                            color: Math.random() * 0xffffff 
+                        });
+                        const cube = new THREE.Mesh(geometry, material);
+                        cube.position.set(
+                            (Math.random() - 0.5) * 10,
+                            Math.random() * 5 + 0.5,
+                            (Math.random() - 0.5) * 10
+                        );
+                        cube.castShadow = true;
+                        cube.receiveShadow = true;
+                        threeCanvas.addObject(cube);
+                    }
                 };
-
+                
+                const addSphere = () => {
+                    if (threeCanvas) {
+                        const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+                        const material = new THREE.MeshLambertMaterial({ 
+                            color: Math.random() * 0xffffff 
+                        });
+                        const sphere = new THREE.Mesh(geometry, material);
+                        sphere.position.set(
+                            (Math.random() - 0.5) * 10,
+                            Math.random() * 5 + 0.5,
+                            (Math.random() - 0.5) * 10
+                        );
+                        sphere.castShadow = true;
+                        sphere.receiveShadow = true;
+                        threeCanvas.addObject(sphere);
+                    }
+                };
+                
+                const addTorus = () => {
+                    if (threeCanvas) {
+                        const geometry = new THREE.TorusGeometry(0.5, 0.2, 16, 100);
+                        const material = new THREE.MeshLambertMaterial({ 
+                            color: Math.random() * 0xffffff 
+                        });
+                        const torus = new THREE.Mesh(geometry, material);
+                        torus.position.set(
+                            (Math.random() - 0.5) * 10,
+                            Math.random() * 5 + 0.5,
+                            (Math.random() - 0.5) * 10
+                        );
+                        torus.castShadow = true;
+                        torus.receiveShadow = true;
+                        threeCanvas.addObject(torus);
+                    }
+                };
+                
+                const clearScene = () => {
+                    if (threeCanvas) {
+                        threeCanvas.sceneManager.clearObjects();
+                        threeCanvas.addDefaultObjects();
+                    }
+                };
+                
+                const loadModel = async (event) => {
+                    const file = event.target.files[0];
+                    if (!file || !threeCanvas) return;
+                    
+                    isLoading.value = true;
+                    loadProgress.value = 0;
+                    
+                    try {
+                        const model = await threeCanvas.assetLoader.loadGLTF(file);
+                        model.traverse((child) => {
+                            if (child.isMesh) {
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                            }
+                        });
+                        threeCanvas.addObject(model);
+                    } catch (error) {
+                        console.error('模型加载失败:', error);
+                        alert('模型加载失败，请检查文件格式');
+                    } finally {
+                        isLoading.value = false;
+                        loadProgress.value = 0;
+                    }
+                };
+                
+                const loadTexture = async (event) => {
+                    const file = event.target.files[0];
+                    if (!file || !threeCanvas) return;
+                    
+                    try {
+                        const texture = await threeCanvas.assetLoader.loadTexture(file);
+                        // 将纹理应用到最后添加的对象
+                        const lastObject = threeCanvas.sceneManager.objects[threeCanvas.sceneManager.objects.length - 1];
+                        if (lastObject && lastObject.material) {
+                            lastObject.material.map = texture;
+                            lastObject.material.needsUpdate = true;
+                        }
+                    } catch (error) {
+                        console.error('纹理加载失败:', error);
+                        alert('纹理加载失败，请检查文件格式');
+                    }
+                };
+                
+                const toggleShadows = () => {
+                    if (threeCanvas) {
+                        if (renderConfig.value.shadows) {
+                            threeCanvas.renderEngine.enableShadows();
+                        } else {
+                            threeCanvas.renderEngine.disableShadows();
+                        }
+                    }
+                };
+                
+                const updateRenderer = () => {
+                    // 抗锯齿需要重新创建渲染器
+                    if (threeCanvas) {
+                        threeCanvas.renderEngine.dispose();
+                        threeCanvas.renderEngine = new RenderEngine();
+                        threeCanvas.renderEngine.setRenderer(canvas.value);
+                        threeCanvas.startRenderLoop();
+                    }
+                };
+                
+                const updatePixelRatio = () => {
+                    if (threeCanvas) {
+                        threeCanvas.renderEngine.setPixelRatio(parseFloat(renderConfig.value.pixelRatio));
+                    }
+                };
+                
+                const exportScene = () => {
+                    if (threeCanvas) {
+                        const sceneData = threeCanvas.sceneManager.exportScene();
+                        const dataStr = JSON.stringify(sceneData, null, 2);
+                        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                        const url = URL.createObjectURL(dataBlob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = 'scene.json';
+                        link.click();
+                        URL.revokeObjectURL(url);
+                    }
+                };
+                
+                const importScene = (event) => {
+                    const file = event.target.files[0];
+                    if (!file || !threeCanvas) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const sceneData = JSON.parse(e.target.result);
+                            threeCanvas.sceneManager.importScene(sceneData);
+                            // 更新UI状态
+                            sceneConfig.value.backgroundColor = `#${sceneData.background.toString(16).padStart(6, '0')}`;
+                            sceneConfig.value.ambientLight = sceneData.lighting.ambient;
+                            sceneConfig.value.directionalLight = sceneData.lighting.directional;
+                        } catch (error) {
+                            console.error('场景导入失败:', error);
+                            alert('场景导入失败，请检查文件格式');
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+                
                 return {
-                    buttonLoading,
-                    inputValue1,
-                    inputValue2,
-                    inputValue3,
-                    inputValue4,
-                    modalInput,
-                    showModal1,
-                    showModal2,
-                    showModal3,
-                    emailRules,
-                    handleClick,
-                    toggleLoading,
-                    validateEmail,
-                    handleModal1Confirm,
-                    handleModal2Confirm,
-                    handleModal3Confirm
+                    canvas,
+                    fileInput,
+                    textureInput,
+                    sceneInput,
+                    sceneConfig,
+                    cameraConfig,
+                    renderConfig,
+                    isLoading,
+                    loadProgress,
+                    fps,
+                    objectCount,
+                    triangleCount,
+                    updateBackground,
+                    updateLighting,
+                    resetCamera,
+                    updateCamera,
+                    updateCameraPosition,
+                    addCube,
+                    addSphere,
+                    addTorus,
+                    clearScene,
+                    loadModel,
+                    loadTexture,
+                    toggleShadows,
+                    updateRenderer,
+                    updatePixelRatio,
+                    exportScene,
+                    importScene
                 };
             }
-        });
-
-        app.mount('#app');
+        }).mount('#app');
     </script>
 </body>
 </html>
