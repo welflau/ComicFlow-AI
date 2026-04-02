@@ -11,41 +11,45 @@
 ## 模块设计
 
 ### ConnectionSystem
-职责: 管理节点间连线的创建、渲染和交互
+职责: 管理节点间连线的创建、渲染、交互和数据流向
 - createConnection(sourceNode, targetNode, connectionType)
-- deleteConnection(connectionId)
+- removeConnection(connectionId)
 - updateConnectionPath(connectionId)
 - validateConnection(source, target)
+- getConnectionsByNode(nodeId)
 
 ### ConnectionRenderer
-职责: 基于Three.js渲染连线的视觉效果
+职责: 基于Three.js渲染连线的视觉效果和动画
 - renderConnection(connection)
 - updateConnectionGeometry(connection)
+- animateDataFlow(connection)
 - highlightConnection(connectionId)
-- animateDataFlow(connectionId)
+- renderConnectionPreview(startPoint, endPoint)
 
 ### ConnectionInteraction
-职责: 处理连线相关的用户交互
+职责: 处理连线相关的用户交互事件
 - startConnectionDrag(sourcePort)
 - updateConnectionPreview(mousePosition)
 - completeConnection(targetPort)
 - selectConnection(connectionId)
+- deleteSelectedConnection()
 
 ### DataFlowVisualizer
-职责: 可视化数据在连线中的流动
+职责: 可视化数据在连线中的流向和状态
 - showDataFlow(connectionId, data)
 - animateFlowParticles(connection)
 - updateFlowDirection(connectionId)
-- pauseDataFlow(connectionId)
+- highlightActiveFlow(connectionId)
 
 ## 数据流
-用户在画布上拖拽创建连线 -> ConnectionInteraction捕获交互事件 -> ConnectionSystem验证连接有效性并创建连线对象 -> ConnectionRenderer使用Three.js渲染连线几何体 -> DataFlowVisualizer添加数据流动画效果 -> 连线状态通过WebSocket同步给其他协作用户
+用户在节点端口上开始拖拽 -> ConnectionInteraction捕获事件并创建预览连线 -> ConnectionRenderer实时渲染预览路径 -> 用户拖拽到目标端口时ConnectionSystem验证连接有效性 -> 创建正式连线对象并存储 -> ConnectionRenderer渲染最终连线 -> DataFlowVisualizer根据工作流状态显示数据流向动画
 
 ## 关键决策
 - 在现有index.html中添加连线系统相关的JavaScript代码，保持单页面架构
-- 使用Three.js的BufferGeometry创建高性能的连线渲染，支持贝塞尔曲线和直线两种类型
-- 采用端口(Port)概念，每个节点有输入输出端口，连线只能在兼容端口间创建
-- 实现连线的分层渲染：背景层(普通连线)、高亮层(选中连线)、动画层(数据流)
-- 使用颜色编码区分不同数据类型的连线：蓝色(数据)、绿色(控制流)、红色(错误)
-- 连线交互采用射线检测(Raycasting)实现精确的鼠标悬停和点击检测
-- 数据流动画使用粒子系统，沿连线路径移动小球表示数据传输
+- 使用Three.js的Line和CatmullRomCurve3实现平滑连线渲染
+- 采用贝塞尔曲线算法计算连线路径，支持自动避障
+- 实现连线的分层渲染，支持不同类型连线的视觉区分
+- 使用事件委托机制处理连线交互，提高性能
+- 集成到现有的画布缩放和平移系统中，确保连线跟随节点移动
+- 支持多种连接类型：数据连接、控制连接、触发连接等
+- 实现连线状态管理，支持激活、错误、禁用等状态可视化
