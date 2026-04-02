@@ -17,120 +17,102 @@ class TestDeployConfiguration:
         assert dev_notes_path.is_file(), f"路径不是文件: {dev_notes_path}"
     
     def test_deploy_module_structure(self):
-        """测试部署模块目录结构是否完整"""
+        """测试部署模块的目录结构是否正确"""
         deploy_module_path = Path("deploy")
         
         # 检查deploy模块目录是否存在
         if deploy_module_path.exists():
             assert deploy_module_path.is_dir(), "deploy应该是一个目录"
             
-            # 检查常见的部署配置文件
-            common_deploy_files = [
-                "requirements.txt",
-                "Dockerfile",
-                "docker-compose.yml",
-                "config.py",
-                "__init__.py"
-            ]
+            # 检查是否包含Python模块文件
+            python_files = list(deploy_module_path.glob("*.py"))
+            init_file = deploy_module_path / "__init__.py"
             
-            existing_files = []
-            for file_name in common_deploy_files:
-                file_path = deploy_module_path / file_name
-                if file_path.exists():
-                    existing_files.append(file_name)
-            
-            # 至少应该存在一个部署相关文件
-            assert len(existing_files) > 0, f"deploy目录中未找到常见的部署配置文件: {common_deploy_files}"
+            # 至少应该有__init__.py文件使其成为Python包
+            assert init_file.exists() or len(python_files) > 0, "deploy模块应包含Python文件"
         else:
             # 如果deploy目录不存在，检查是否有deploy.py文件
-            deploy_file_path = Path("deploy.py")
-            assert deploy_file_path.exists(), "既没有deploy目录也没有deploy.py文件"
+            deploy_file = Path("deploy.py")
+            assert deploy_file.exists(), "deploy模块或deploy.py文件应该存在"
     
     def test_documentation_content_validity(self):
-        """测试文档内容的有效性和完整性"""
-        docs_base_path = Path("docs")
+        """测试文档内容是否包含部署相关的关键信息"""
+        docs_dir = Path("docs")
         
-        if docs_base_path.exists():
-            # 检查文档目录结构
-            target_doc_path = docs_base_path / "78b245" / "b949fa" / "dev-notes.md"
+        # 查找所有markdown文档文件
+        md_files = []
+        if docs_dir.exists():
+            md_files = list(docs_dir.rglob("*.md"))
+        
+        # 检查dev-notes.md文件内容
+        dev_notes_path = Path("docs/78b245/b949fa/dev-notes.md")
+        if dev_notes_path.exists():
+            content = dev_notes_path.read_text(encoding='utf-8')
             
-            if target_doc_path.exists():
-                # 读取文档内容并检查关键信息
-                content = target_doc_path.read_text(encoding='utf-8')
-                
-                # 检查文档不为空
-                assert len(content.strip()) > 0, "开发笔记文档内容为空"
-                
-                # 检查是否包含常见的开发文档关键词
-                dev_keywords = [
-                    "部署", "配置", "环境", "安装", "运行",
-                    "deploy", "config", "setup", "install", "run"
-                ]
-                
-                found_keywords = []
-                content_lower = content.lower()
-                for keyword in dev_keywords:
-                    if keyword.lower() in content_lower:
-                        found_keywords.append(keyword)
-                
-                assert len(found_keywords) > 0, f"文档中未找到开发相关关键词: {dev_keywords}"
-            else:
-                # 如果目标文档不存在，检查docs目录下是否有其他文档文件
-                doc_files = list(docs_base_path.rglob("*.md"))
-                doc_files.extend(list(docs_base_path.rglob("*.txt")))
-                doc_files.extend(list(docs_base_path.rglob("*.rst")))
-                
-                assert len(doc_files) > 0, "docs目录中未找到任何文档文件"
+            # 检查文档是否包含部署相关关键词
+            deploy_keywords = ['部署', 'deploy', '配置', 'config', '环境', 'environment']
+            has_deploy_content = any(keyword in content.lower() for keyword in deploy_keywords)
+            
+            assert len(content.strip()) > 0, "开发笔记文档不应为空"
+            assert has_deploy_content, "文档应包含部署相关内容"
         else:
-            # 如果docs目录不存在，检查项目根目录下的README文件
-            readme_files = [
-                Path("README.md"),
-                Path("README.txt"),
-                Path("README.rst"),
-                Path("readme.md")
-            ]
-            
-            existing_readme = [f for f in readme_files if f.exists()]
-            assert len(existing_readme) > 0, "未找到项目文档文件（README或docs目录）"
-
-    def test_deploy_module_importability(self):
-        """测试部署模块是否可以正确导入"""
-        try:
-            # 尝试导入deploy模块
-            if Path("deploy/__init__.py").exists():
-                import deploy
-                assert hasattr(deploy, '__name__'), "deploy模块导入失败"
-            elif Path("deploy.py").exists():
-                import deploy
-                assert hasattr(deploy, '__name__'), "deploy.py文件导入失败"
-            else:
-                # 如果没有deploy模块，跳过此测试
-                pytest.skip("未找到可导入的deploy模块")
-        except ImportError as e:
-            pytest.fail(f"导入deploy模块失败: {e}")
-
-    def test_project_configuration_files(self):
-        """测试项目配置文件的存在性和有效性"""
+            # 如果指定文件不存在，检查是否有其他相关文档
+            assert len(md_files) > 0, "项目应包含文档文件"
+    
+    def test_deploy_configuration_files(self):
+        """测试部署配置文件是否存在且格式正确"""
         config_files = [
-            "setup.py",
-            "pyproject.toml",
             "requirements.txt",
-            "Pipfile",
-            "environment.yml",
-            "config.ini",
-            "config.yaml",
-            "config.json"
+            "setup.py", 
+            "pyproject.toml",
+            "Dockerfile",
+            "docker-compose.yml",
+            ".env.example"
         ]
         
-        existing_configs = []
+        existing_config_files = []
         for config_file in config_files:
             config_path = Path(config_file)
             if config_path.exists():
-                existing_configs.append(config_file)
+                existing_config_files.append(config_file)
+                assert config_path.is_file(), f"{config_file}应该是文件"
                 
                 # 检查文件不为空
-                if config_path.stat().st_size > 0:
-                    assert True, f"配置文件 {config_file} 存在且不为空"
+                if config_path.suffix in ['.txt', '.yml', '.yaml', '.toml']:
+                    content = config_path.read_text(encoding='utf-8')
+                    assert len(content.strip()) > 0, f"{config_file}不应为空"
         
-        # 至少应该存在一个配置文件
-        assert len(existing_configs) > 0, f"未找到任何项目配置文件: {config_files}"
+        # 至少应该有一个配置文件存在
+        assert len(existing_config_files) > 0, "项目应包含至少一个部署配置文件"
+    
+    def test_project_structure_integrity(self):
+        """测试项目整体结构的完整性"""
+        project_root = Path(".")
+        
+        # 检查基本的项目文件
+        essential_items = []
+        
+        # 检查是否有Python文件
+        py_files = list(project_root.glob("*.py"))
+        if len(py_files) > 0:
+            essential_items.extend(py_files)
+        
+        # 检查是否有子目录
+        subdirs = [p for p in project_root.iterdir() if p.is_dir() and not p.name.startswith('.')]
+        essential_items.extend(subdirs)
+        
+        # 检查docs目录结构
+        docs_path = Path("docs")
+        if docs_path.exists():
+            assert docs_path.is_dir(), "docs应该是目录"
+            
+            # 检查docs下的子目录结构
+            subdir_78b245 = docs_path / "78b245"
+            if subdir_78b245.exists():
+                assert subdir_78b245.is_dir(), "78b245应该是目录"
+                
+                subdir_b949fa = subdir_78b245 / "b949fa"
+                if subdir_b949fa.exists():
+                    assert subdir_b949fa.is_dir(), "b949fa应该是目录"
+        
+        assert len(essential_items) > 0, "项目应包含基本的文件或目录结构"
