@@ -1,4 +1,4 @@
-"""测试: 3D画布组件开发"""
+"""测试: 基础组件库开发"""
 import os
 from pathlib import Path
 
