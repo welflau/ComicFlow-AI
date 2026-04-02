@@ -1,23 +1,25 @@
-"""测试: 数据库设计与建模"""
+"""测试: 节点系统开发"""
+import os
 from pathlib import Path
 
 REPO_DIR = Path(__file__).parent.parent
 
-def test_source_files_exist():
-    """测试源代码文件存在"""
-    src = REPO_DIR / "src"
-    if src.exists():
-        files = list(src.rglob("*.*"))
-        assert len(files) > 0, "src/ 目录下无文件"
-
-def test_entry_file_exists():
+def test_index_html_exists():
     """测试入口文件存在"""
-    entries = ["main.py", "app.py", "index.html"]
-    found = any((REPO_DIR / e).exists() for e in entries)
-    assert found, "缺少入口文件"
+    assert (REPO_DIR / "index.html").exists(), "index.html 不存在"
 
-def test_no_syntax_errors():
-    """测试 Python 文件无语法错误"""
-    for pf in list(REPO_DIR.rglob("src/**/*.py"))[:10]:
-        content = pf.read_text(encoding="utf-8", errors="replace")
-        compile(content, str(pf), "exec")
+def test_index_html_has_content():
+    """测试入口文件有内容"""
+    content = (REPO_DIR / "index.html").read_text(encoding="utf-8")
+    assert len(content) > 100, "index.html 内容过少"
+    assert "<html" in content.lower(), "缺少 HTML 标签"
+
+def test_index_html_has_title():
+    """测试页面有标题"""
+    content = (REPO_DIR / "index.html").read_text(encoding="utf-8")
+    assert "<title>" in content.lower(), "缺少 title 标签"
+
+def test_has_css_styles():
+    """测试页面包含样式"""
+    content = (REPO_DIR / "index.html").read_text(encoding="utf-8")
+    assert "<style" in content.lower() or "stylesheet" in content.lower(), "无 CSS 样式"
