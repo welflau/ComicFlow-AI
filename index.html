@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>节点系统工作流画布</title>
-    <script src="https://unpkg.com/three@0.155.0/build/three.min.js"></script>
+    <title>工单管理系统</title>
     <style>
         * {
             margin: 0;
@@ -16,513 +15,434 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            overflow: hidden;
+            padding: 20px;
         }
 
         .app-container {
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .toolbar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 15px 20px;
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-        }
-
-        .toolbar h1 {
-            color: #333;
-            font-size: 20px;
-            margin-right: 30px;
-        }
-
-        .node-button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            color: white;
-        }
-
-        .input-node-btn {
-            background: linear-gradient(135deg, #4CAF50, #45a049);
-        }
-
-        .process-node-btn {
-            background: linear-gradient(135deg, #2196F3, #1976D2);
-        }
-
-        .output-node-btn {
-            background: linear-gradient(135deg, #FF9800, #F57C00);
-        }
-
-        .node-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        .canvas-container {
-            flex: 1;
-            position: relative;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             overflow: hidden;
         }
 
-        #canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
+        .header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 20px;
+            text-align: center;
         }
 
-        .node {
-            position: absolute;
-            background: white;
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            cursor: move;
-            user-select: none;
-            min-width: 120px;
-            z-index: 100;
-            transition: transform 0.2s ease;
+        .main-content {
+            display: flex;
+            min-height: 600px;
         }
 
-        .node:hover {
-            transform: scale(1.05);
+        .sidebar {
+            width: 250px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-right: 1px solid #e9ecef;
         }
 
-        .node.dragging {
-            z-index: 1000;
-            transform: scale(1.1);
+        .sidebar h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
         }
 
-        .node-header {
-            font-weight: bold;
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
             margin-bottom: 8px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #ddd;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .status-item:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transform: translateX(2px);
+        }
+
+        .status-item.testing {
+            border-left-color: #ff9800;
+        }
+
+        .status-item.completed {
+            border-left-color: #4caf50;
+        }
+
+        .status-item.pending {
+            border-left-color: #2196f3;
+        }
+
+        .status-count {
+            background: #007bff;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 20px;
+        }
+
+        .ticket-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .ticket-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .ticket-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .ticket-id {
+            font-weight: bold;
             color: #333;
         }
 
-        .node-content {
+        .ticket-status {
+            padding: 4px 12px;
+            border-radius: 20px;
             font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-testing {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-pending {
+            background: #cce5ff;
+            color: #004085;
+            border: 1px solid #b3d7ff;
+        }
+
+        .ticket-title {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .ticket-description {
             color: #666;
+            font-size: 14px;
+            line-height: 1.4;
         }
 
-        .connection-point {
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #2196F3;
-            cursor: crosshair;
-            z-index: 200;
+        .refresh-btn {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
         }
 
-        .input-point {
-            left: -6px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        .output-point {
-            right: -6px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        .connection-point:hover {
-            background: #1976D2;
-            transform: translateY(-50%) scale(1.2);
-        }
-
-        .input-node {
-            border-left: 4px solid #4CAF50;
-        }
-
-        .process-node {
-            border-left: 4px solid #2196F3;
-        }
-
-        .output-node {
-            border-left: 4px solid #FF9800;
-        }
-
-        .connection-line {
-            position: absolute;
-            pointer-events: none;
-            z-index: 50;
-        }
-
-        .temp-line {
-            stroke: #2196F3;
-            stroke-width: 2;
-            stroke-dasharray: 5,5;
-            fill: none;
-        }
-
-        .permanent-line {
-            stroke: #4CAF50;
-            stroke-width: 3;
-            fill: none;
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
         }
     </style>
 </head>
 <body>
     <div class="app-container">
-        <div class="toolbar">
-            <h1>智能画布工作流</h1>
-            <button class="node-button input-node-btn" onclick="createNode('input')">输入节点</button>
-            <button class="node-button process-node-btn" onclick="createNode('process')">处理节点</button>
-            <button class="node-button output-node-btn" onclick="createNode('output')">输出节点</button>
+        <div class="header">
+            <h1>工单管理系统</h1>
         </div>
-        <div class="canvas-container">
-            <canvas id="canvas"></canvas>
-            <svg id="connection-svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50;"></svg>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <h3>工单统计</h3>
+                <div id="statusStats">
+                    <!-- 状态统计将在这里动态生成 -->
+                </div>
+                <button class="refresh-btn" onclick="refreshData()">刷新数据</button>
+            </div>
+            
+            <div class="content-area">
+                <h3>工单列表</h3>
+                <div id="ticketList" class="ticket-list">
+                    <!-- 工单列表将在这里动态生成 -->
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        class WorkflowCanvas {
-            constructor() {
-                this.canvas = document.getElementById('canvas');
-                this.svg = document.getElementById('connection-svg');
-                this.container = document.querySelector('.canvas-container');
-                this.nodes = new Map();
-                this.connections = new Map();
-                this.nodeCounter = 0;
-                this.isDragging = false;
-                this.dragNode = null;
-                this.dragOffset = { x: 0, y: 0 };
-                this.isConnecting = false;
-                this.connectionStart = null;
-                this.tempLine = null;
+        // 工单状态枚举
+        const TICKET_STATUS = {
+            PENDING: 'pending',
+            TESTING: 'testing', 
+            COMPLETED: 'completed'
+        };
+
+        // 状态显示配置
+        const STATUS_CONFIG = {
+            [TICKET_STATUS.PENDING]: {
+                label: '待处理',
+                class: 'pending',
+                color: '#2196f3'
+            },
+            [TICKET_STATUS.TESTING]: {
+                label: '测试中',
+                class: 'testing',
+                color: '#ff9800'
+            },
+            [TICKET_STATUS.COMPLETED]: {
+                label: '已完成',
+                class: 'completed', 
+                color: '#4caf50'
+            }
+        };
+
+        // 模拟工单数据
+        let tickets = [
+            {
+                id: 'T001',
+                title: '用户登录功能优化',
+                description: '优化用户登录流程，提升用户体验',
+                status: TICKET_STATUS.COMPLETED,
+                lastUpdated: '2024-01-15 14:30'
+            },
+            {
+                id: 'T002', 
+                title: '数据库性能调优',
+                description: '优化数据库查询性能，减少响应时间',
+                status: TICKET_STATUS.TESTING,
+                lastUpdated: '2024-01-15 16:20'
+            },
+            {
+                id: 'T003',
+                title: '移动端适配问题',
+                description: '修复移动端页面显示异常问题',
+                status: TICKET_STATUS.PENDING,
+                lastUpdated: '2024-01-15 10:15'
+            },
+            {
+                id: 'T004',
+                title: '支付接口集成',
+                description: '集成第三方支付接口，支持多种支付方式',
+                status: TICKET_STATUS.COMPLETED,
+                lastUpdated: '2024-01-14 18:45'
+            },
+            {
+                id: 'T005',
+                title: '邮件通知功能',
+                description: '实现系统邮件通知功能',
+                status: TICKET_STATUS.TESTING,
+                lastUpdated: '2024-01-15 12:00'
+            }
+        ];
+
+        // 获取状态统计
+        function getStatusStats() {
+            const stats = {
+                [TICKET_STATUS.PENDING]: 0,
+                [TICKET_STATUS.TESTING]: 0,
+                [TICKET_STATUS.COMPLETED]: 0
+            };
+            
+            tickets.forEach(ticket => {
+                if (stats.hasOwnProperty(ticket.status)) {
+                    stats[ticket.status]++;
+                }
+            });
+            
+            return stats;
+        }
+
+        // 渲染状态统计
+        function renderStatusStats() {
+            const stats = getStatusStats();
+            const container = document.getElementById('statusStats');
+            
+            container.innerHTML = '';
+            
+            Object.keys(STATUS_CONFIG).forEach(status => {
+                const config = STATUS_CONFIG[status];
+                const count = stats[status] || 0;
                 
-                this.init();
-                this.setupEventListeners();
-            }
-
-            init() {
-                this.resizeCanvas();
-                window.addEventListener('resize', () => this.resizeCanvas());
-            }
-
-            resizeCanvas() {
-                const rect = this.container.getBoundingClientRect();
-                this.canvas.width = rect.width;
-                this.canvas.height = rect.height;
-                this.svg.setAttribute('width', rect.width);
-                this.svg.setAttribute('height', rect.height);
-                
-                // 重新渲染所有连线
-                this.updateAllConnections();
-            }
-
-            setupEventListeners() {
-                // 鼠标事件
-                this.container.addEventListener('mousedown', this.handleMouseDown.bind(this));
-                this.container.addEventListener('mousemove', this.handleMouseMove.bind(this));
-                this.container.addEventListener('mouseup', this.handleMouseUp.bind(this));
-                
-                // 防止右键菜单
-                this.container.addEventListener('contextmenu', (e) => e.preventDefault());
-            }
-
-            createNode(type) {
-                const nodeId = `node_${++this.nodeCounter}`;
-                const node = document.createElement('div');
-                node.className = `node ${type}-node`;
-                node.id = nodeId;
-                node.innerHTML = `
-                    <div class="node-header">${this.getNodeTitle(type)}</div>
-                    <div class="node-content">${this.getNodeContent(type)}</div>
-                    <div class="connection-point input-point" data-type="input"></div>
-                    <div class="connection-point output-point" data-type="output"></div>
+                const statusItem = document.createElement('div');
+                statusItem.className = `status-item ${config.class}`;
+                statusItem.innerHTML = `
+                    <span>${config.label}</span>
+                    <span class="status-count">${count}</span>
                 `;
-
-                // 随机位置
-                const x = Math.random() * (this.container.offsetWidth - 200) + 100;
-                const y = Math.random() * (this.container.offsetHeight - 150) + 100;
                 
-                node.style.left = x + 'px';
-                node.style.top = y + 'px';
+                container.appendChild(statusItem);
+            });
+        }
 
-                this.container.appendChild(node);
-                this.nodes.set(nodeId, {
-                    element: node,
-                    type: type,
-                    x: x,
-                    y: y,
-                    connections: { input: [], output: [] }
-                });
-
-                return nodeId;
-            }
-
-            getNodeTitle(type) {
-                const titles = {
-                    'input': '数据输入',
-                    'process': '数据处理',
-                    'output': '结果输出'
-                };
-                return titles[type] || '未知节点';
-            }
-
-            getNodeContent(type) {
-                const contents = {
-                    'input': '接收外部数据',
-                    'process': '执行业务逻辑',
-                    'output': '输出处理结果'
-                };
-                return contents[type] || '节点描述';
-            }
-
-            handleMouseDown(e) {
-                const target = e.target;
+        // 渲染工单列表
+        function renderTicketList() {
+            const container = document.getElementById('ticketList');
+            
+            container.innerHTML = '';
+            
+            tickets.forEach(ticket => {
+                const config = STATUS_CONFIG[ticket.status];
                 
-                // 处理连接点点击
-                if (target.classList.contains('connection-point')) {
-                    this.startConnection(e, target);
-                    return;
+                const ticketCard = document.createElement('div');
+                ticketCard.className = 'ticket-card';
+                ticketCard.innerHTML = `
+                    <div class="ticket-header">
+                        <span class="ticket-id">${ticket.id}</span>
+                        <span class="ticket-status status-${config.class}">${config.label}</span>
+                    </div>
+                    <div class="ticket-title">${ticket.title}</div>
+                    <div class="ticket-description">${ticket.description}</div>
+                    <div style="margin-top: 10px; font-size: 12px; color: #999;">
+                        最后更新: ${ticket.lastUpdated}
+                    </div>
+                `;
+                
+                container.appendChild(ticketCard);
+            });
+        }
+
+        // 刷新数据
+        function refreshData() {
+            // 模拟数据更新 - 在实际应用中这里会调用API
+            console.log('刷新数据...');
+            
+            // 确保数据一致性检查
+            validateDataConsistency();
+            
+            // 重新渲染
+            renderStatusStats();
+            renderTicketList();
+            
+            // 显示刷新成功提示
+            showNotification('数据已刷新');
+        }
+
+        // 数据一致性验证
+        function validateDataConsistency() {
+            const stats = getStatusStats();
+            
+            // 检查每个工单的状态是否在有效范围内
+            tickets.forEach(ticket => {
+                if (!Object.values(TICKET_STATUS).includes(ticket.status)) {
+                    console.warn(`工单 ${ticket.id} 状态异常: ${ticket.status}`);
+                    // 修复异常状态
+                    ticket.status = TICKET_STATUS.PENDING;
                 }
-                
-                // 处理节点拖拽
-                const node = target.closest('.node');
-                if (node) {
-                    this.startDrag(e, node);
-                }
+            });
+            
+            // 验证统计数据与实际工单数据一致性
+            const totalTickets = tickets.length;
+            const totalStats = Object.values(stats).reduce((sum, count) => sum + count, 0);
+            
+            if (totalTickets !== totalStats) {
+                console.error('数据不一致: 工单总数与统计不匹配');
             }
+        }
 
-            handleMouseMove(e) {
-                if (this.isDragging && this.dragNode) {
-                    this.updateNodePosition(e);
-                } else if (this.isConnecting && this.tempLine) {
-                    this.updateTempLine(e);
-                }
+        // 显示通知
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #4caf50;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 6px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                z-index: 9999;
+                font-size: 14px;
+                transition: all 0.3s ease;
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 2000);
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始数据一致性检查
+            validateDataConsistency();
+            
+            // 渲染页面
+            renderStatusStats();
+            renderTicketList();
+            
+            console.log('工单管理系统已加载');
+        });
+
+        // 模拟状态变更（用于测试）
+        function simulateStatusChange() {
+            if (tickets.length > 0) {
+                const randomTicket = tickets[Math.floor(Math.random() * tickets.length)];
+                const statuses = Object.values(TICKET_STATUS);
+                const newStatus = statuses[Math.floor(Math.random() * statuses.length)];
+                
+                console.log(`模拟工单 ${randomTicket.id} 状态变更: ${randomTicket.status} -> ${newStatus}`);
+                randomTicket.status = newStatus;
+                randomTicket.lastUpdated = new Date().toLocaleString('zh-CN');
+                
+                refreshData();
             }
+        }
 
-            handleMouseUp(e) {
-                if (this.isConnecting) {
-                    this.finishConnection(e);
-                } else if (this.isDragging) {
-                    this.finishDrag();
-                }
-            }
-
-            startConnection(e, connectionPoint) {
-                e.stopPropagation();
-                this.isConnecting = true;
-                this.connectionStart = {
-                    node: connectionPoint.closest('.node'),
-                    type: connectionPoint.dataset.type,
-                    point: connectionPoint
-                };
-                
-                // 创建临时连线
-                this.createTempLine(e);
-            }
-
-            createTempLine(e) {
-                const startPos = this.getConnectionPointPosition(this.connectionStart.point);
-                
-                this.tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                this.tempLine.classList.add('temp-line');
-                
-                const path = this.createCurvePath(startPos.x, startPos.y, e.clientX - this.container.offsetLeft, e.clientY - this.container.offsetTop);
-                this.tempLine.setAttribute('d', path);
-                
-                this.svg.appendChild(this.tempLine);
-            }
-
-            updateTempLine(e) {
-                if (!this.tempLine || !this.connectionStart) return;
-                
-                const startPos = this.getConnectionPointPosition(this.connectionStart.point);
-                const endX = e.clientX - this.container.offsetLeft;
-                const endY = e.clientY - this.container.offsetTop;
-                
-                const path = this.createCurvePath(startPos.x, startPos.y, endX, endY);
-                this.tempLine.setAttribute('d', path);
-            }
-
-            finishConnection(e) {
-                const target = e.target;
-                
-                if (target.classList.contains('connection-point') && 
-                    target !== this.connectionStart.point &&
-                    target.dataset.type !== this.connectionStart.type) {
-                    
-                    // 创建永久连线
-                    this.createConnection(this.connectionStart, {
-                        node: target.closest('.node'),
-                        type: target.dataset.type,
-                        point: target
-                    });
-                }
-                
-                // 清理临时连线
-                if (this.tempLine) {
-                    this.svg.removeChild(this.tempLine);
-                    this.tempLine = null;
-                }
-                
-                this.isConnecting = false;
-                this.connectionStart = null;
-            }
-
-            createConnection(start, end) {
-                const connectionId = `conn_${start.node.id}_${end.node.id}`;
-                
-                // 避免重复连接
-                if (this.connections.has(connectionId)) {
-                    return;
-                }
-                
-                const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                line.classList.add('permanent-line');
-                line.id = connectionId;
-                
-                this.svg.appendChild(line);
-                
-                this.connections.set(connectionId, {
-                    start: start,
-                    end: end,
-                    element: line
-                });
-                
-                // 更新节点连接信息
-                const startNodeData = this.nodes.get(start.node.id);
-                const endNodeData = this.nodes.get(end.node.id);
-                
-                if (start.type === 'output') {
-                    startNodeData.connections.output.push(connectionId);
-                    endNodeData.connections.input.push(connectionId);
-                } else {
-                    startNodeData.connections.input.push(connectionId);
-                    endNodeData.connections.output.push(connectionId);
-                }
-                
-                this.updateConnection(connectionId);
-            }
-
-            updateConnection(connectionId) {
-                const connection = this.connections.get(connectionId);
-                if (!connection) return;
-                
-                const startPos = this.getConnectionPointPosition(connection.start.point);
-                const endPos = this.getConnectionPointPosition(connection.end.point);
-                
-                const path = this.createCurvePath(startPos.x, startPos.y, endPos.x, endPos.y);
-                connection.element.setAttribute('d', path);
-            }
-
-            updateAllConnections() {
-                this.connections.forEach((connection, connectionId) => {
-                    this.updateConnection(connectionId);
-                });
-            }
-
-            getConnectionPointPosition(point) {
-                const rect = point.getBoundingClientRect();
-                const containerRect = this.container.getBoundingClientRect();
-                
-                return {
-                    x: rect.left + rect.width / 2 - containerRect.left,
-                    y: rect.top + rect.height / 2 - containerRect.top
-                };
-            }
-
-            createCurvePath(x1, y1, x2, y2) {
-                const dx = x2 - x1;
-                const dy = y2 - y1;
-                
-                // 控制点偏移量，创建平滑的贝塞尔曲线
-                const controlOffset = Math.abs(dx) * 0.5;
-                
-                const cp1x = x1 + controlOffset;
-                const cp1y = y1;
-                const cp2x = x2 - controlOffset;
-                const cp2y = y2;
-                
-                return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
-            }
-
-            startDrag(e, node) {
-                this.isDragging = true;
-                this.dragNode = node;
-                node.classList.add('dragging');
-                
-                const rect = node.getBoundingClientRect();
-                const containerRect = this.container.getBoundingClientRect();
-                
-                this.dragOffset = {
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top
-                };
-                
+        // 添加键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'r') {
                 e.preventDefault();
+                refreshData();
             }
-
-            updateNodePosition(e) {
-                if (!this.dragNode) return;
-                
-                const containerRect = this.container.getBoundingClientRect();
-                const x = e.clientX - containerRect.left - this.dragOffset.x;
-                const y = e.clientY - containerRect.top - this.dragOffset.y;
-                
-                // 边界检查
-                const nodeRect = this.dragNode.getBoundingClientRect();
-                const maxX = this.container.offsetWidth - nodeRect.width;
-                const maxY = this.container.offsetHeight - nodeRect.height;
-                
-                const clampedX = Math.max(0, Math.min(x, maxX));
-                const clampedY = Math.max(0, Math.min(y, maxY));
-                
-                this.dragNode.style.left = clampedX + 'px';
-                this.dragNode.style.top = clampedY + 'px';
-                
-                // 更新节点数据
-                const nodeData = this.nodes.get(this.dragNode.id);
-                if (nodeData) {
-                    nodeData.x = clampedX;
-                    nodeData.y = clampedY;
-                    
-                    // 更新相关连线
-                    nodeData.connections.input.forEach(connId => this.updateConnection(connId));
-                    nodeData.connections.output.forEach(connId => this.updateConnection(connId));
-                }
+            if (e.ctrlKey && e.key === 't') {
+                e.preventDefault();
+                simulateStatusChange();
             }
-
-            finishDrag() {
-                if (this.dragNode) {
-                    this.dragNode.classList.remove('dragging');
-                    this.dragNode = null;
-                }
-                this.isDragging = false;
-                this.dragOffset = { x: 0, y: 0 };
-            }
-        }
-
-        // 全局函数
-        let workflowCanvas;
-
-        function createNode(type) {
-            if (!workflowCanvas) {
-                workflowCanvas = new WorkflowCanvas();
-            }
-            workflowCanvas.createNode(type);
-        }
-
-        // 初始化
-        document.addEventListener('DOMContentLoaded', () => {
-            workflowCanvas = new WorkflowCanvas();
         });
     </script>
 </body>
