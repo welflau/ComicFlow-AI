@@ -1,62 +1,59 @@
 # 架构设计 - 数据库设计与建模
 
 ## 架构模式
-数据库建模架构
+数据库分层架构
 
 ## 技术栈
 
-- **language**: JavaScript/SQL
-- **framework**: Node.js + MongoDB/PostgreSQL
+- **language**: JavaScript
+- **framework**: Node.js + Mongoose/Sequelize
 
 ## 模块设计
 
 ### Canvas Model
-职责: 画布数据模型，存储画布基本信息、视图状态和元数据
-- createCanvas(canvasData)
-- updateCanvas(canvasId, updates)
-- getCanvas(canvasId)
-- deleteCanvas(canvasId)
-- getCanvasByUser(userId)
+职责: 画布数据模型，存储画布基本信息、配置和元数据
+- createCanvas()
+- updateCanvas()
+- getCanvasById()
+- deleteCanvas()
+- getCanvasByUser()
 
 ### Node Model
 职责: 节点数据模型，存储节点类型、位置、配置和状态信息
-- createNode(nodeData)
-- updateNode(nodeId, updates)
-- getNode(nodeId)
-- deleteNode(nodeId)
-- getNodesByCanvas(canvasId)
+- createNode()
+- updateNode()
+- deleteNode()
+- getNodesByCanvas()
+- updateNodePosition()
 
 ### Connection Model
-职责: 连线数据模型，存储节点间的连接关系和数据流配置
-- createConnection(connectionData)
-- updateConnection(connectionId, updates)
-- getConnection(connectionId)
-- deleteConnection(connectionId)
-- getConnectionsByCanvas(canvasId)
+职责: 连线数据模型，存储节点间的连接关系和数据流向
+- createConnection()
+- deleteConnection()
+- getConnectionsByCanvas()
+- validateConnection()
 
 ### Workflow Model
-职责: 工作流状态模型，存储执行状态、运行历史和调度信息
-- createWorkflow(workflowData)
-- updateWorkflowStatus(workflowId, status)
-- getWorkflow(workflowId)
-- getWorkflowHistory(workflowId)
-- getActiveWorkflows()
+职责: 工作流状态模型，存储执行状态、结果和历史记录
+- createWorkflow()
+- updateWorkflowStatus()
+- getWorkflowHistory()
+- saveExecutionResult()
 
 ### Collaboration Model
-职责: 协作数据模型，存储用户权限、实时编辑状态和变更历史
-- addCollaborator(canvasId, userId, permission)
-- updateUserCursor(canvasId, userId, position)
-- recordChange(canvasId, userId, changeData)
-- getCollaborators(canvasId)
-- getChangeHistory(canvasId)
+职责: 协作数据模型，存储实时编辑状态和用户操作记录
+- createCollabSession()
+- updateUserCursor()
+- saveOperation()
+- getActiveUsers()
 
 ## 数据流
-用户通过画布操作触发数据变更 -> 数据模型验证和存储 -> WebSocket广播变更事件 -> 其他协作用户实时同步 -> 工作流引擎根据节点连接关系执行任务 -> 状态更新持久化到数据库
+用户通过现有认证系统登录后，可创建画布(Canvas)，在画布中添加节点(Node)和连线(Connection)，形成工作流(Workflow)。所有操作通过协作模型(Collaboration)实时同步给其他用户。数据库采用关系型设计，Canvas为主表，Node和Connection为子表，Workflow存储执行状态，Collaboration记录实时操作。
 
 ## 关键决策
-- 基于现有User模型扩展，保持数据库配置一致性
-- 采用文档型数据库存储复杂的节点配置和画布状态
-- 使用关系型设计处理用户权限和协作关系
-- 实现软删除机制支持版本历史和回滚
-- 设计索引策略优化大画布的查询性能
-- 预留扩展字段支持未来节点类型和功能迭代
+- 扩展现有User模型，添加画布关联关系
+- 采用MongoDB存储灵活的节点配置数据
+- 使用Redis缓存实时协作状态
+- 设计版本控制机制支持画布历史回滚
+- 建立索引优化大量节点的查询性能
+- 预留扩展字段支持未来节点类型增加
