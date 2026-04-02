@@ -77,56 +77,61 @@
             overflow: hidden;
         }
 
-        #canvas {
+        .canvas {
             width: 100%;
             height: 100%;
-            display: block;
+            position: relative;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
         }
 
         .node {
             position: absolute;
             background: white;
             border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
             cursor: move;
             user-select: none;
-            min-width: 120px;
-            border: 2px solid transparent;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            min-width: 150px;
+            z-index: 10;
         }
 
         .node:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2);
         }
 
-        .node.selected {
-            border-color: #2196F3;
-            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
+        .node.dragging {
+            z-index: 1000;
+            transform: rotate(3deg) scale(1.05);
         }
 
-        .node.input {
-            border-left: 4px solid #4CAF50;
-        }
-
-        .node.process {
-            border-left: 4px solid #2196F3;
-        }
-
-        .node.output {
-            border-left: 4px solid #FF9800;
-        }
-
-        .node-title {
+        .node-header {
+            padding: 12px 16px;
+            border-radius: 12px 12px 0 0;
+            color: white;
             font-weight: 600;
-            margin-bottom: 8px;
-            color: #333;
+            font-size: 14px;
+        }
+
+        .input-node .node-header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+
+        .process-node .node-header {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+        }
+
+        .output-node .node-header {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
         }
 
         .node-content {
-            font-size: 12px;
-            color: #666;
+            padding: 16px;
+            color: #333;
+            font-size: 13px;
+            line-height: 1.4;
         }
 
         .connection-point {
@@ -134,34 +139,30 @@
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            background: #2196F3;
+            background: #fff;
+            border: 3px solid;
             cursor: crosshair;
-            border: 2px solid white;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            z-index: 10;
-        }
-
-        .connection-point.output {
-            right: -6px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        .connection-point.input {
-            left: -6px;
-            top: 50%;
-            transform: translateY(-50%);
+            z-index: 20;
+            transition: all 0.2s ease;
         }
 
         .connection-point:hover {
-            transform: translateY(-50%) scale(1.2);
-            background: #1976D2;
+            transform: scale(1.3);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
         }
 
-        .temp-line {
-            position: absolute;
-            pointer-events: none;
-            z-index: 5;
+        .input-point {
+            left: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-color: #4CAF50;
+        }
+
+        .output-point {
+            right: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-color: #2196F3;
         }
 
         .connection-line {
@@ -170,30 +171,40 @@
             z-index: 1;
         }
 
-        .controls {
+        .temp-line {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            pointer-events: none;
+            z-index: 100;
+            stroke: #666;
+            stroke-width: 2;
+            stroke-dasharray: 5,5;
+            opacity: 0.7;
         }
 
-        .control-button {
-            display: block;
-            width: 100%;
-            margin-bottom: 5px;
-            padding: 5px 10px;
+        .delete-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ff4444;
+            color: white;
             border: none;
-            border-radius: 4px;
-            background: #f5f5f5;
             cursor: pointer;
             font-size: 12px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
         }
 
-        .control-button:hover {
-            background: #e0e0e0;
+        .node:hover .delete-btn {
+            display: flex;
+        }
+
+        .delete-btn:hover {
+            background: #cc0000;
         }
     </style>
 </head>
@@ -201,16 +212,13 @@
     <div class="app-container">
         <div class="toolbar">
             <h1>智能画布工作流</h1>
-            <button class="node-button input-node-btn" onclick="createNode('input')">输入节点</button>
-            <button class="node-button process-node-btn" onclick="createNode('process')">处理节点</button>
-            <button class="node-button output-node-btn" onclick="createNode('output')">输出节点</button>
+            <button class="node-button input-node-btn" onclick="addNode('input')">添加输入节点</button>
+            <button class="node-button process-node-btn" onclick="addNode('process')">添加处理节点</button>
+            <button class="node-button output-node-btn" onclick="addNode('output')">添加输出节点</button>
         </div>
         <div class="canvas-container">
-            <canvas id="canvas"></canvas>
-            <div class="controls">
-                <button class="control-button" onclick="clearCanvas()">清空画布</button>
-                <button class="control-button" onclick="resetView()">重置视图</button>
-            </div>
+            <div class="canvas" id="canvas"></div>
+            <svg id="connection-svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;"></svg>
         </div>
     </div>
 
@@ -218,468 +226,355 @@
         class WorkflowCanvas {
             constructor() {
                 this.canvas = document.getElementById('canvas');
-                this.container = document.querySelector('.canvas-container');
-                this.nodes = [];
-                this.connections = [];
-                this.selectedNode = null;
+                this.svg = document.getElementById('connection-svg');
+                this.nodes = new Map();
+                this.connections = new Map();
+                this.nodeCounter = 0;
+                this.connectionCounter = 0;
                 this.isDragging = false;
+                this.dragNode = null;
+                this.dragOffset = { x: 0, y: 0 };
                 this.isConnecting = false;
                 this.connectionStart = null;
                 this.tempLine = null;
-                this.nodeCounter = 0;
-                this.scale = 1;
-                this.panX = 0;
-                this.panY = 0;
-                this.isPanning = false;
-                this.lastMouseX = 0;
-                this.lastMouseY = 0;
                 
                 this.init();
             }
 
             init() {
-                this.setupCanvas();
-                this.setupEventListeners();
-                this.render();
+                this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+                document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+                document.addEventListener('mouseup', this.handleMouseUp.bind(this));
+                
+                // 防止默认的拖拽行为
+                this.canvas.addEventListener('dragstart', (e) => e.preventDefault());
+                this.canvas.addEventListener('selectstart', (e) => e.preventDefault());
             }
 
-            setupCanvas() {
-                this.canvas.width = this.container.clientWidth;
-                this.canvas.height = this.container.clientHeight;
-                this.ctx = this.canvas.getContext('2d');
+            addNode(type) {
+                const nodeId = `node_${++this.nodeCounter}`;
+                const node = this.createNodeElement(nodeId, type);
                 
-                // 设置高DPI支持
-                const dpr = window.devicePixelRatio || 1;
-                const rect = this.canvas.getBoundingClientRect();
-                this.canvas.width = rect.width * dpr;
-                this.canvas.height = rect.height * dpr;
-                this.ctx.scale(dpr, dpr);
-                this.canvas.style.width = rect.width + 'px';
-                this.canvas.style.height = rect.height + 'px';
-            }
-
-            setupEventListeners() {
-                // 窗口大小改变
-                window.addEventListener('resize', () => {
-                    this.setupCanvas();
-                    this.render();
-                });
-
-                // 鼠标事件
-                this.canvas.addEventListener('mousedown', this.onMouseDown.bind(this));
-                this.canvas.addEventListener('mousemove', this.onMouseMove.bind(this));
-                this.canvas.addEventListener('mouseup', this.onMouseUp.bind(this));
-                this.canvas.addEventListener('wheel', this.onWheel.bind(this));
+                // 随机位置放置节点
+                const x = Math.random() * (this.canvas.clientWidth - 200) + 50;
+                const y = Math.random() * (this.canvas.clientHeight - 150) + 50;
                 
-                // 键盘事件
-                document.addEventListener('keydown', this.onKeyDown.bind(this));
-            }
-
-            getMousePos(e) {
-                const rect = this.canvas.getBoundingClientRect();
-                return {
-                    x: (e.clientX - rect.left - this.panX) / this.scale,
-                    y: (e.clientY - rect.top - this.panY) / this.scale
-                };
-            }
-
-            onMouseDown(e) {
-                const pos = this.getMousePos(e);
-                const clickedNode = this.getNodeAt(pos.x, pos.y);
+                node.style.left = x + 'px';
+                node.style.top = y + 'px';
                 
-                if (clickedNode) {
-                    this.selectedNode = clickedNode;
-                    this.isDragging = true;
-                    this.dragOffset = {
-                        x: pos.x - clickedNode.x,
-                        y: pos.y - clickedNode.y
-                    };
-                } else {
-                    this.selectedNode = null;
-                    this.isPanning = true;
-                    this.lastMouseX = e.clientX;
-                    this.lastMouseY = e.clientY;
-                }
-                
-                this.render();
-            }
-
-            onMouseMove(e) {
-                const pos = this.getMousePos(e);
-                
-                if (this.isDragging && this.selectedNode) {
-                    this.selectedNode.x = pos.x - this.dragOffset.x;
-                    this.selectedNode.y = pos.y - this.dragOffset.y;
-                    this.updateConnections();
-                    this.render();
-                } else if (this.isPanning) {
-                    const deltaX = e.clientX - this.lastMouseX;
-                    const deltaY = e.clientY - this.lastMouseY;
-                    this.panX += deltaX;
-                    this.panY += deltaY;
-                    this.lastMouseX = e.clientX;
-                    this.lastMouseY = e.clientY;
-                    this.render();
-                } else if (this.isConnecting && this.connectionStart) {
-                    this.render();
-                    this.drawTempConnection(pos.x, pos.y);
-                }
-            }
-
-            onMouseUp(e) {
-                if (this.isConnecting) {
-                    const pos = this.getMousePos(e);
-                    const targetNode = this.getNodeAt(pos.x, pos.y);
-                    
-                    if (targetNode && targetNode !== this.connectionStart && 
-                        !this.connectionExists(this.connectionStart, targetNode)) {
-                        this.createConnection(this.connectionStart, targetNode);
-                    }
-                    
-                    this.isConnecting = false;
-                    this.connectionStart = null;
-                }
-                
-                this.isDragging = false;
-                this.isPanning = false;
-                this.render();
-            }
-
-            onWheel(e) {
-                e.preventDefault();
-                const pos = this.getMousePos(e);
-                const scaleFactor = e.deltaY > 0 ? 0.9 : 1.1;
-                const newScale = Math.max(0.1, Math.min(3, this.scale * scaleFactor));
-                
-                // 计算缩放中心点
-                const rect = this.canvas.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
-                
-                // 调整平移以保持鼠标位置不变
-                this.panX = mouseX - (mouseX - this.panX) * (newScale / this.scale);
-                this.panY = mouseY - (mouseY - this.panY) * (newScale / this.scale);
-                
-                this.scale = newScale;
-                this.render();
-            }
-
-            onKeyDown(e) {
-                if (e.key === 'Delete' && this.selectedNode) {
-                    this.deleteNode(this.selectedNode);
-                } else if (e.key === 'c' && this.selectedNode) {
-                    this.startConnection(this.selectedNode);
-                }
-            }
-
-            createNode(type) {
-                const node = {
-                    id: ++this.nodeCounter,
+                this.canvas.appendChild(node);
+                this.nodes.set(nodeId, {
+                    element: node,
                     type: type,
-                    x: (this.canvas.width / 2 - this.panX) / this.scale + Math.random() * 100 - 50,
-                    y: (this.canvas.height / 2 - this.panY) / this.scale + Math.random() * 100 - 50,
-                    width: 120,
-                    height: 60,
-                    title: this.getNodeTitle(type),
-                    content: this.getNodeContent(type)
-                };
-                
-                this.nodes.push(node);
-                this.render();
-            }
-
-            getNodeTitle(type) {
-                const titles = {
-                    input: '输入节点',
-                    process: '处理节点',
-                    output: '输出节点'
-                };
-                return titles[type] || '未知节点';
-            }
-
-            getNodeContent(type) {
-                const contents = {
-                    input: '数据输入',
-                    process: '数据处理',
-                    output: '结果输出'
-                };
-                return contents[type] || '未知功能';
-            }
-
-            getNodeAt(x, y) {
-                for (let i = this.nodes.length - 1; i >= 0; i--) {
-                    const node = this.nodes[i];
-                    if (x >= node.x && x <= node.x + node.width &&
-                        y >= node.y && y <= node.y + node.height) {
-                        return node;
-                    }
-                }
-                return null;
-            }
-
-            startConnection(node) {
-                this.isConnecting = true;
-                this.connectionStart = node;
-            }
-
-            createConnection(from, to) {
-                const connection = {
-                    id: Date.now(),
-                    from: from,
-                    to: to,
-                    fromX: from.x + from.width,
-                    fromY: from.y + from.height / 2,
-                    toX: to.x,
-                    toY: to.y + to.height / 2
-                };
-                
-                this.connections.push(connection);
-                this.updateConnections();
-            }
-
-            connectionExists(from, to) {
-                return this.connections.some(conn => 
-                    (conn.from === from && conn.to === to) ||
-                    (conn.from === to && conn.to === from)
-                );
-            }
-
-            updateConnections() {
-                this.connections.forEach(conn => {
-                    conn.fromX = conn.from.x + conn.from.width;
-                    conn.fromY = conn.from.y + conn.from.height / 2;
-                    conn.toX = conn.to.x;
-                    conn.toY = conn.to.y + conn.to.height / 2;
+                    x: x,
+                    y: y
                 });
             }
 
-            deleteNode(node) {
-                // 删除相关连接
-                this.connections = this.connections.filter(conn => 
-                    conn.from !== node && conn.to !== node
-                );
+            createNodeElement(nodeId, type) {
+                const node = document.createElement('div');
+                node.className = `node ${type}-node`;
+                node.dataset.nodeId = nodeId;
+                
+                const typeNames = {
+                    'input': '输入节点',
+                    'process': '处理节点', 
+                    'output': '输出节点'
+                };
+                
+                const descriptions = {
+                    'input': '数据输入源\n支持多种格式',
+                    'process': '数据处理逻辑\n转换和计算',
+                    'output': '结果输出\n保存或展示'
+                };
+                
+                node.innerHTML = `
+                    <div class="node-header">${typeNames[type]}</div>
+                    <div class="node-content">${descriptions[type]}</div>
+                    <button class="delete-btn" onclick="workflowCanvas.deleteNode('${nodeId}')">&times;</button>
+                `;
+                
+                // 添加连接点
+                if (type !== 'output') {
+                    const outputPoint = document.createElement('div');
+                    outputPoint.className = 'connection-point output-point';
+                    outputPoint.dataset.nodeId = nodeId;
+                    outputPoint.dataset.pointType = 'output';
+                    node.appendChild(outputPoint);
+                }
+                
+                if (type !== 'input') {
+                    const inputPoint = document.createElement('div');
+                    inputPoint.className = 'connection-point input-point';
+                    inputPoint.dataset.nodeId = nodeId;
+                    inputPoint.dataset.pointType = 'input';
+                    node.appendChild(inputPoint);
+                }
+                
+                return node;
+            }
+
+            handleMouseDown(e) {
+                e.preventDefault();
+                
+                const target = e.target;
+                
+                // 检查是否点击了连接点
+                if (target.classList.contains('connection-point')) {
+                    this.startConnection(e, target);
+                    return;
+                }
+                
+                // 检查是否点击了节点
+                const node = target.closest('.node');
+                if (node && !target.classList.contains('delete-btn')) {
+                    this.startDrag(e, node);
+                }
+            }
+
+            startConnection(e, connectionPoint) {
+                this.isConnecting = true;
+                this.connectionStart = {
+                    nodeId: connectionPoint.dataset.nodeId,
+                    pointType: connectionPoint.dataset.pointType,
+                    element: connectionPoint
+                };
+                
+                // 创建临时连线
+                this.createTempLine(e);
+                
+                // 阻止事件冒泡
+                e.stopPropagation();
+            }
+
+            createTempLine(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const startPoint = this.getConnectionPointPosition(this.connectionStart.element);
+                
+                this.tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                this.tempLine.setAttribute('class', 'temp-line');
+                this.tempLine.setAttribute('x1', startPoint.x);
+                this.tempLine.setAttribute('y1', startPoint.y);
+                this.tempLine.setAttribute('x2', e.clientX - rect.left);
+                this.tempLine.setAttribute('y2', e.clientY - rect.top);
+                
+                this.svg.appendChild(this.tempLine);
+            }
+
+            startDrag(e, node) {
+                this.isDragging = true;
+                this.dragNode = node;
+                
+                const rect = node.getBoundingClientRect();
+                const canvasRect = this.canvas.getBoundingClientRect();
+                
+                this.dragOffset = {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+                
+                node.classList.add('dragging');
+            }
+
+            handleMouseMove(e) {
+                if (this.isConnecting && this.tempLine) {
+                    // 更新临时连线
+                    const rect = this.canvas.getBoundingClientRect();
+                    this.tempLine.setAttribute('x2', e.clientX - rect.left);
+                    this.tempLine.setAttribute('y2', e.clientY - rect.top);
+                } else if (this.isDragging && this.dragNode) {
+                    // 拖拽节点
+                    const canvasRect = this.canvas.getBoundingClientRect();
+                    const x = e.clientX - canvasRect.left - this.dragOffset.x;
+                    const y = e.clientY - canvasRect.top - this.dragOffset.y;
+                    
+                    // 边界检查
+                    const maxX = this.canvas.clientWidth - this.dragNode.offsetWidth;
+                    const maxY = this.canvas.clientHeight - this.dragNode.offsetHeight;
+                    
+                    const clampedX = Math.max(0, Math.min(x, maxX));
+                    const clampedY = Math.max(0, Math.min(y, maxY));
+                    
+                    this.dragNode.style.left = clampedX + 'px';
+                    this.dragNode.style.top = clampedY + 'px';
+                    
+                    // 更新节点数据
+                    const nodeId = this.dragNode.dataset.nodeId;
+                    if (this.nodes.has(nodeId)) {
+                        this.nodes.get(nodeId).x = clampedX;
+                        this.nodes.get(nodeId).y = clampedY;
+                    }
+                    
+                    // 更新相关连线
+                    this.updateConnections(nodeId);
+                }
+            }
+
+            handleMouseUp(e) {
+                if (this.isConnecting) {
+                    this.finishConnection(e);
+                } else if (this.isDragging) {
+                    this.finishDrag();
+                }
+            }
+
+            finishConnection(e) {
+                const target = e.target;
+                
+                // 检查是否结束在有效的连接点上
+                if (target.classList.contains('connection-point')) {
+                    const endPoint = {
+                        nodeId: target.dataset.nodeId,
+                        pointType: target.dataset.pointType,
+                        element: target
+                    };
+                    
+                    // 验证连接是否有效
+                    if (this.isValidConnection(this.connectionStart, endPoint)) {
+                        this.createConnection(this.connectionStart, endPoint);
+                    }
+                }
+                
+                // 清理临时连线
+                if (this.tempLine) {
+                    this.svg.removeChild(this.tempLine);
+                    this.tempLine = null;
+                }
+                
+                this.isConnecting = false;
+                this.connectionStart = null;
+            }
+
+            finishDrag() {
+                if (this.dragNode) {
+                    this.dragNode.classList.remove('dragging');
+                    this.dragNode = null;
+                }
+                this.isDragging = false;
+                this.dragOffset = { x: 0, y: 0 };
+            }
+
+            isValidConnection(start, end) {
+                // 不能连接到自己
+                if (start.nodeId === end.nodeId) {
+                    return false;
+                }
+                
+                // 输出点只能连接到输入点
+                if (start.pointType === 'output' && end.pointType === 'input') {
+                    return true;
+                }
+                
+                // 输入点只能连接到输出点
+                if (start.pointType === 'input' && end.pointType === 'output') {
+                    return true;
+                }
+                
+                return false;
+            }
+
+            createConnection(start, end) {
+                const connectionId = `conn_${++this.connectionCounter}`;
+                
+                // 确保连接方向正确（从输出到输入）
+                let fromPoint = start.pointType === 'output' ? start : end;
+                let toPoint = start.pointType === 'input' ? start : end;
+                
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('class', 'connection-line');
+                line.setAttribute('stroke', '#666');
+                line.setAttribute('stroke-width', '2');
+                line.dataset.connectionId = connectionId;
+                
+                this.svg.appendChild(line);
+                
+                this.connections.set(connectionId, {
+                    element: line,
+                    from: fromPoint.nodeId,
+                    to: toPoint.nodeId,
+                    fromPoint: fromPoint.element,
+                    toPoint: toPoint.element
+                });
+                
+                this.updateConnectionLine(connectionId);
+            }
+
+            updateConnections(nodeId) {
+                this.connections.forEach((conn, connId) => {
+                    if (conn.from === nodeId || conn.to === nodeId) {
+                        this.updateConnectionLine(connId);
+                    }
+                });
+            }
+
+            updateConnectionLine(connectionId) {
+                const conn = this.connections.get(connectionId);
+                if (!conn) return;
+                
+                const fromPos = this.getConnectionPointPosition(conn.fromPoint);
+                const toPos = this.getConnectionPointPosition(conn.toPoint);
+                
+                conn.element.setAttribute('x1', fromPos.x);
+                conn.element.setAttribute('y1', fromPos.y);
+                conn.element.setAttribute('x2', toPos.x);
+                conn.element.setAttribute('y2', toPos.y);
+            }
+
+            getConnectionPointPosition(pointElement) {
+                const rect = pointElement.getBoundingClientRect();
+                const canvasRect = this.canvas.getBoundingClientRect();
+                
+                return {
+                    x: rect.left + rect.width / 2 - canvasRect.left,
+                    y: rect.top + rect.height / 2 - canvasRect.top
+                };
+            }
+
+            deleteNode(nodeId) {
+                const node = this.nodes.get(nodeId);
+                if (!node) return;
+                
+                // 删除相关连线
+                const connectionsToDelete = [];
+                this.connections.forEach((conn, connId) => {
+                    if (conn.from === nodeId || conn.to === nodeId) {
+                        connectionsToDelete.push(connId);
+                    }
+                });
+                
+                connectionsToDelete.forEach(connId => {
+                    const conn = this.connections.get(connId);
+                    if (conn.element.parentNode) {
+                        conn.element.parentNode.removeChild(conn.element);
+                    }
+                    this.connections.delete(connId);
+                });
                 
                 // 删除节点
-                this.nodes = this.nodes.filter(n => n !== node);
-                this.selectedNode = null;
-                this.render();
-            }
-
-            render() {
-                // 清空画布
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                
-                // 保存当前变换状态
-                this.ctx.save();
-                
-                // 应用平移和缩放
-                this.ctx.translate(this.panX, this.panY);
-                this.ctx.scale(this.scale, this.scale);
-                
-                // 绘制网格
-                this.drawGrid();
-                
-                // 绘制连接线
-                this.drawConnections();
-                
-                // 绘制节点
-                this.drawNodes();
-                
-                // 恢复变换状态
-                this.ctx.restore();
-            }
-
-            drawGrid() {
-                const gridSize = 20;
-                const width = this.canvas.width / this.scale;
-                const height = this.canvas.height / this.scale;
-                const offsetX = -this.panX / this.scale;
-                const offsetY = -this.panY / this.scale;
-                
-                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-                this.ctx.lineWidth = 1;
-                
-                // 垂直线
-                for (let x = offsetX % gridSize; x < width; x += gridSize) {
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(x, 0);
-                    this.ctx.lineTo(x, height);
-                    this.ctx.stroke();
+                if (node.element.parentNode) {
+                    node.element.parentNode.removeChild(node.element);
                 }
-                
-                // 水平线
-                for (let y = offsetY % gridSize; y < height; y += gridSize) {
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(0, y);
-                    this.ctx.lineTo(width, y);
-                    this.ctx.stroke();
-                }
-            }
-
-            drawNodes() {
-                this.nodes.forEach(node => {
-                    // 节点背景
-                    this.ctx.fillStyle = 'white';
-                    this.ctx.strokeStyle = node === this.selectedNode ? '#2196F3' : '#ddd';
-                    this.ctx.lineWidth = node === this.selectedNode ? 3 : 1;
-                    
-                    this.drawRoundedRect(node.x, node.y, node.width, node.height, 8);
-                    this.ctx.fill();
-                    this.ctx.stroke();
-                    
-                    // 类型指示条
-                    const colors = {
-                        input: '#4CAF50',
-                        process: '#2196F3',
-                        output: '#FF9800'
-                    };
-                    
-                    this.ctx.fillStyle = colors[node.type] || '#666';
-                    this.ctx.fillRect(node.x, node.y, 4, node.height);
-                    
-                    // 节点文本
-                    this.ctx.fillStyle = '#333';
-                    this.ctx.font = 'bold 14px Arial';
-                    this.ctx.textAlign = 'left';
-                    this.ctx.fillText(node.title, node.x + 10, node.y + 20);
-                    
-                    this.ctx.fillStyle = '#666';
-                    this.ctx.font = '12px Arial';
-                    this.ctx.fillText(node.content, node.x + 10, node.y + 40);
-                    
-                    // 连接点
-                    this.drawConnectionPoints(node);
-                });
-            }
-
-            drawConnectionPoints(node) {
-                // 输出点（右侧）
-                if (node.type !== 'output') {
-                    this.ctx.fillStyle = '#2196F3';
-                    this.ctx.strokeStyle = 'white';
-                    this.ctx.lineWidth = 2;
-                    this.ctx.beginPath();
-                    this.ctx.arc(node.x + node.width, node.y + node.height / 2, 6, 0, Math.PI * 2);
-                    this.ctx.fill();
-                    this.ctx.stroke();
-                }
-                
-                // 输入点（左侧）
-                if (node.type !== 'input') {
-                    this.ctx.fillStyle = '#2196F3';
-                    this.ctx.strokeStyle = 'white';
-                    this.ctx.lineWidth = 2;
-                    this.ctx.beginPath();
-                    this.ctx.arc(node.x, node.y + node.height / 2, 6, 0, Math.PI * 2);
-                    this.ctx.fill();
-                    this.ctx.stroke();
-                }
-            }
-
-            drawConnections() {
-                this.connections.forEach(conn => {
-                    this.drawConnection(conn.fromX, conn.fromY, conn.toX, conn.toY, '#2196F3', 3);
-                });
-            }
-
-            drawConnection(fromX, fromY, toX, toY, color = '#2196F3', lineWidth = 2) {
-                const dx = toX - fromX;
-                const controlOffset = Math.max(50, Math.abs(dx) * 0.5);
-                
-                this.ctx.strokeStyle = color;
-                this.ctx.lineWidth = lineWidth;
-                this.ctx.lineCap = 'round';
-                this.ctx.lineJoin = 'round';
-                
-                // 绘制贝塞尔曲线
-                this.ctx.beginPath();
-                this.ctx.moveTo(fromX, fromY);
-                this.ctx.bezierCurveTo(
-                    fromX + controlOffset, fromY,
-                    toX - controlOffset, toY,
-                    toX, toY
-                );
-                this.ctx.stroke();
-                
-                // 绘制箭头
-                this.drawArrow(toX, toY, Math.atan2(toY - fromY, toX - fromX), color);
-            }
-
-            drawTempConnection(toX, toY) {
-                if (this.connectionStart) {
-                    const fromX = this.connectionStart.x + this.connectionStart.width;
-                    const fromY = this.connectionStart.y + this.connectionStart.height / 2;
-                    this.drawConnection(fromX, fromY, toX, toY, 'rgba(33, 150, 243, 0.5)', 2);
-                }
-            }
-
-            drawArrow(x, y, angle, color) {
-                const arrowLength = 10;
-                const arrowAngle = Math.PI / 6;
-                
-                this.ctx.fillStyle = color;
-                this.ctx.beginPath();
-                this.ctx.moveTo(x, y);
-                this.ctx.lineTo(
-                    x - arrowLength * Math.cos(angle - arrowAngle),
-                    y - arrowLength * Math.sin(angle - arrowAngle)
-                );
-                this.ctx.lineTo(
-                    x - arrowLength * Math.cos(angle + arrowAngle),
-                    y - arrowLength * Math.sin(angle + arrowAngle)
-                );
-                this.ctx.closePath();
-                this.ctx.fill();
-            }
-
-            drawRoundedRect(x, y, width, height, radius) {
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + radius, y);
-                this.ctx.lineTo(x + width - radius, y);
-                this.ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-                this.ctx.lineTo(x + width, y + height - radius);
-                this.ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-                this.ctx.lineTo(x + radius, y + height);
-                this.ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-                this.ctx.lineTo(x, y + radius);
-                this.ctx.quadraticCurveTo(x, y, x + radius, y);
-                this.ctx.closePath();
-            }
-
-            clearCanvas() {
-                this.nodes = [];
-                this.connections = [];
-                this.selectedNode = null;
-                this.nodeCounter = 0;
-                this.render();
-            }
-
-            resetView() {
-                this.scale = 1;
-                this.panX = 0;
-                this.panY = 0;
-                this.render();
+                this.nodes.delete(nodeId);
             }
         }
 
-        // 全局变量和函数
-        let canvas;
-
-        function createNode(type) {
-            canvas.createNode(type);
+        // 全局函数
+        let workflowCanvas;
+        
+        function addNode(type) {
+            workflowCanvas.addNode(type);
         }
-
-        function clearCanvas() {
-            canvas.clearCanvas();
-        }
-
-        function resetView() {
-            canvas.resetView();
-        }
-
+        
         // 初始化
         document.addEventListener('DOMContentLoaded', () => {
-            canvas = new WorkflowCanvas();
+            workflowCanvas = new WorkflowCanvas();
+            
+            // 添加一些示例节点
+            setTimeout(() => {
+                workflowCanvas.addNode('input');
+                workflowCanvas.addNode('process');
+                workflowCanvas.addNode('output');
+            }, 100);
         });
     </script>
 </body>
